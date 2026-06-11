@@ -56,9 +56,9 @@ export default function Dashboard() {
       </p>
 
       <div className="cards">
-        <div className="card">
+        <div className="card lift-a">
           <div className="label">Team Avg Score</div>
-          <div className="value tier-great">{o.avgScore !== null ? o.avgScore.toFixed(1) : "—"}</div>
+          <div className="value">{o.avgScore !== null ? o.avgScore.toFixed(1) : "—"}</div>
           <div className="tier muted">out of 100</div>
         </div>
         <div className="card">
@@ -66,7 +66,7 @@ export default function Dashboard() {
           <div className="value tier-great">{o.platinum}/{o.total}</div>
           <div className="tier muted">top tier this week</div>
         </div>
-        <div className="card">
+        <div className="card lift-b">
           <div className="label">Packages Delivered</div>
           <div className="value">{fmt(o.delivered)}</div>
           <div className="tier muted">across the whole team</div>
