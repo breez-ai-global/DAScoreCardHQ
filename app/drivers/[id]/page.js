@@ -168,26 +168,28 @@ export default function DriverDetail({ params }) {
 
       <div className="panel">
         <h2>Weekly History</h2>
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Week</th><th>Score</th><th>Delivered</th><th>DCR</th><th>DSB</th><th>POD</th><th>CDF</th>
-            </tr>
-          </thead>
-          <tbody>
-            {history.map((h) => (
-              <tr key={h.week}>
-                <td>{h.week}</td>
-                <td>{fmt(h.overall)}</td>
-                <td>{fmt(h.delivered)}</td>
-                <td className={metricTier(h.dcr, "dcr")[1]}>{fmt(h.dcr, h.dcr !== null ? "%" : "")}</td>
-                <td>{fmt(h.dsb)}</td>
-                <td className={metricTier(h.pod, "pod")[1]}>{fmt(h.pod, h.pod !== null ? "%" : "")}</td>
-                <td className={metricTier(h.cdf, "cdf")[1]}>{fmt(h.cdf)}</td>
+        <div className="table-wrap">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Week</th><th><Term k="Score">Score</Term></th><th><Term k="Delivered">Delivered</Term></th><th><Term k="DCR">DCR</Term></th><th><Term k="DSB">DSB</Term></th><th><Term k="POD">POD</Term></th><th><Term k="CDF">CDF</Term></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {history.map((h) => (
+                <tr key={h.week}>
+                  <td>{h.week}</td>
+                  <td>{fmt(h.overall)}</td>
+                  <td>{fmt(h.delivered)}</td>
+                  <td className={metricTier(h.dcr, "dcr")[1]}>{fmt(h.dcr, h.dcr !== null ? "%" : "")}</td>
+                  <td>{fmt(h.dsb)}</td>
+                  <td className={metricTier(h.pod, "pod")[1]}>{fmt(h.pod, h.pod !== null ? "%" : "")}</td>
+                  <td className={metricTier(h.cdf, "cdf")[1]}>{fmt(h.cdf)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {dailyRows.length > 0 && (
