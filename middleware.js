@@ -11,7 +11,7 @@ async function expectedToken() {
 }
 
 export async function middleware(request) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
 
   // Public paths
   if (
@@ -20,8 +20,10 @@ export async function middleware(request) {
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
     pathname.startsWith("/logo") ||
-    // Coaching reports are link-shareable with DAs (payload lives in the URL)
-    pathname.startsWith("/coaching/view")
+    // Coaching reports are link-shareable with DAs (ids are unguessable)
+    pathname.startsWith("/coaching/view") ||
+    pathname.startsWith("/api/reports/sign") ||
+    (pathname === "/api/reports" && searchParams.has("id"))
   ) {
     return NextResponse.next();
   }
