@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { makeManagerSummary } from "../lib/reportTone";
 
 function b64url(obj) {
   const json = JSON.stringify(obj);
@@ -21,6 +22,7 @@ export default function CoachingBuilder({ drivers }) {
 
   const [driverId, setDriverId] = useState(preselect);
   const [severity, setSeverity] = useState("coaching");
+  const [managerName, setManagerName] = useState("");
   const [summary, setSummary] = useState("");
   const [expectations, setExpectations] = useState(
     "Follow delivery instructions on every stop.\nTake clear POD photos at the correct drop location.\nContact dispatch before marking any package RTS."
@@ -30,49 +32,40 @@ export default function CoachingBuilder({ drivers }) {
   );
   const [reviewDate, setReviewDate] = useState("");
   const [link, setLink] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
-  const driver = useMemo(
-    () => drivers.find((d) => d.id === driverId),
-    [drivers, driverId]
-  );
+  const driver = useMemo(() => drivers.find((d) => d.id === driverId), [drivers, driverId]);
 
-  function autoSummary(d) {
-    if (!d) return "";
-    const parts = [];
-    if (d.metrics.feedback) parts.push(`${d.metrics.feedback} negative customer feedback event(s)`);
-    if (d.metrics.concessions) parts.push(`${d.metrics.concessions} concession(s)`);
-    if (d.metrics.rts) parts.push(`${d.metrics.rts} RTS event(s)`);
-    if (d.metrics.pod !== null && d.metrics.pod < 97) parts.push(`POD acceptance at ${d.metrics.pod}%`);
-    if (d.metrics.dcr !== null && d.metrics.dcr < 99) parts.push(`DCR at ${d.metrics.dcr}%`);
-    if (!parts.length) return "Performance review and coaching.";
-    return `During ${d.week}, the following performance issues were identified: ${parts.join(
-      "; "
-    )}. Recent events:\n` +
-      d.issues
-        .slice(0, 8)
-        .map((i) => `• [${i.type}] ${i.date} — ${i.detail}`)
-        .join("\n");
+  function regenerate(id = driverId, sev = severity) {
+    const d = drivers.find((x) => x.id === id);
+    if (d) setSummary(makeManagerSummary(sev, d));
   }
 
   function selectDriver(id) {
     setDriverId(id);
-    const d = drivers.find((x) => x.id === id);
-    setSummary(autoSummary(d));
     setLink("");
+    regenerate(id, severity);
   }
 
-  useMemo(() => {
-    if (preselect && !summary) {
-      const d = drivers.find((x) => x.id === preselect);
-      if (d) setSummary(autoSummary(d));
-    }
+  function selectSeverity(sev) {
+    setSeverity(sev);
+    regenerate(driverId, sev);
+  }
+
+  useEffect(() => {
+    if (preselect) regenerate(preselect, "coaching");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function generate() {
-    if (!driver) return;
+  async function generate() {
+    if (!driver || !managerName.trim()) return;
+    setBusy(true);
+    setErr("");
+    const id = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now());
     const payload = {
-      v: 1,
+      v: 2,
+      id,
       driver: { id: driver.id, name: driver.name },
       week: driver.week,
       severity,
@@ -81,11 +74,25 @@ export default function CoachingBuilder({ drivers }) {
       plan: severity === "coaching" ? "" : plan,
       metrics: driver.metrics,
       reviewDate,
-      issuedBy: "Breez Global Logistics LLC — Management",
-      issuedAt: new Date().toISOString().slice(0, 10),
+      manager: { name: managerName.trim(), signedAt: new Date().toISOString() },
+      da: null,
+      createdAt: new Date().toISOString(),
     };
-    const url = `${window.location.origin}/coaching/view?d=${b64url(payload)}`;
-    setLink(url);
+    try {
+      const res = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "save failed");
+      setLink(`${window.location.origin}/coaching/view?id=${id}`);
+      window.dispatchEvent(new Event("bgl-reports-changed"));
+    } catch (e) {
+      // Storage unavailable — fall back to a self-contained link (no DA e-sign tracking)
+      setErr("Couldn't save to the report ledger (" + e.message + "). Generated a self-contained link instead — signing status won't be tracked.");
+      setLink(`${window.location.origin}/coaching/view?d=${b64url(payload)}`);
+    }
+    setBusy(false);
   }
 
   async function copy() {
@@ -108,14 +115,14 @@ export default function CoachingBuilder({ drivers }) {
         </select>
 
         <label>Report Type</label>
-        <select value={severity} onChange={(e) => setSeverity(e.target.value)}>
+        <select value={severity} onChange={(e) => selectSeverity(e.target.value)}>
           {SEVERITIES.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
 
-        <label>Issue Summary</label>
-        <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={7} />
+        <label>Manager Summary (auto-written to match the report type — edit freely)</label>
+        <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={10} />
 
         <label>Expectations</label>
         <textarea value={expectations} onChange={(e) => setExpectations(e.target.value)} />
@@ -130,16 +137,29 @@ export default function CoachingBuilder({ drivers }) {
         <label>Review Date</label>
         <input type="date" value={reviewDate} onChange={(e) => setReviewDate(e.target.value)} />
 
+        <label>Your name (signs the report as manager)</label>
+        <input
+          type="text"
+          placeholder="e.g. Ameer Brown"
+          value={managerName}
+          onChange={(e) => setManagerName(e.target.value)}
+        />
+        {managerName.trim() && (
+          <div className="signature" style={{ marginTop: 8, borderBottom: "none" }}>{managerName.trim()}</div>
+        )}
+
         <div style={{ marginTop: 18, display: "flex", gap: 10 }}>
-          <button className="btn" onClick={generate} disabled={!driver}>
-            Generate Shareable Link
+          <button className="btn" onClick={generate} disabled={!driver || !managerName.trim() || busy}>
+            {busy ? "Signing & saving…" : "Sign & Create Report"}
           </button>
         </div>
+
+        {err && <p style={{ color: "var(--amber)", fontSize: 12.5 }}>{err}</p>}
 
         {link && (
           <div className="share-box">
             <div style={{ marginBottom: 8 }}>
-              <a href={link} target="_blank" rel="noreferrer">Open report ↗</a>
+              <a href={link} target="_blank" rel="noreferrer">Open report ↗</a> — send this link to the DA to review &amp; sign
             </div>
             {link}
             <div style={{ marginTop: 10 }}>

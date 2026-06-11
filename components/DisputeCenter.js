@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useDateFilter } from "./DateFilter";
 
 const STATUSES = ["Needs review", "Will dispute", "Disputed - waiting", "Won", "Lost", "Not disputing"];
 const PRIORITY_DOT = { High: "var(--red)", Medium: "var(--amber)", "Look into": "var(--breeze)" };
 
-export default function DisputeCenter({ flags }) {
+export default function DisputeCenter({ flags: allFlags }) {
+  const [flags, dateControls] = useDateFilter(allFlags, (f) => f.date);
   const [state, setState] = useState({});
 
   useEffect(() => {
@@ -61,10 +63,11 @@ export default function DisputeCenter({ flags }) {
           <span><span className="dot" style={{ background: "var(--amber)" }} /> <b>Medium</b> — likely disputable / exemption may apply</span>
           <span><span className="dot" style={{ background: "var(--breeze)" }} /> <b>Look into</b> — needs context before deciding</span>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
           <button className="btn secondary" onClick={exportCsv}>⬇ Export dispute list (CSV)</button>
           <button className="btn secondary" onClick={resetAll}>↺ Reset all statuses</button>
         </div>
+        {dateControls}
       </div>
 
       <div className="panel">

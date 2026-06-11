@@ -1,10 +1,11 @@
 // Server-rendered SVG charts (no client JS, no deps).
 
 const TIER_COLORS = {
-  Platinum: "#7f9cff",
-  Gold: "#ffce8a",
-  Silver: "#9aa6c4",
-  Bronze: "#ff7d7d",
+  Platinum: "#adadfb",
+  Gold: "#ffd08a",
+  Silver: "#a0bce8",
+  Bronze: "#ff9e7a",
+  "At Risk": "#ff8a8a",
   Unrated: "#3a4664",
 };
 

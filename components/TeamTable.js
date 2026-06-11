@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Avatar from "./Avatar";
+import Term from "./Term";
 
 const TIER_DOT = {
   platinum: "var(--primary)",
@@ -13,15 +14,15 @@ const TIER_DOT = {
 };
 
 const COLS = [
-  ["name", "Driver"],
-  ["tierText", "Tier"],
-  ["overall", "Score"],
-  ["delivered", "Packages"],
-  ["dcr", "Completion %"],
-  ["pod", "Photo %"],
-  ["feedbackCount", "Complaints"],
-  ["scanFlags", "Scan Flags"],
-  ["urgent", "Urgent Items"],
+  ["name", "Driver", null],
+  ["tierText", "Tier", "Tier"],
+  ["overall", "Score", "Score"],
+  ["delivered", "Packages", "Delivered"],
+  ["dcr", "Completion %", "Completion"],
+  ["pod", "Photo %", "Photos"],
+  ["feedbackCount", "Complaints", "Complaints"],
+  ["scanFlags", "Scan Flags", "Scan Flags"],
+  ["urgent", "Urgent Items", "Urgent Items"],
 ];
 
 function tierClass(t) {
@@ -31,6 +32,13 @@ function tierClass(t) {
   if (s.includes("silver")) return "silver";
   if (s.includes("bronze")) return "bronze";
   return "neutral";
+}
+
+// Anyone with an overall score under 70 is shown as At Risk, whatever Amazon says.
+function effective(d) {
+  if (d.overall !== null && d.overall !== undefined && d.overall < 70)
+    return { label: "At Risk", cls: "bronze", amazon: d.tierText };
+  return { label: d.tierText, cls: tierClass(d.tierText), amazon: null };
 }
 
 export default function TeamTable({ rows }) {
@@ -61,9 +69,10 @@ export default function TeamTable({ rows }) {
       <table className="data">
         <thead>
           <tr>
-            {COLS.map(([k, label]) => (
+            {COLS.map(([k, label, termKey]) => (
               <th key={k} onClick={() => clickCol(k)} style={{ cursor: "pointer" }}>
-                {label} {sortKey === k ? (dir === -1 ? "↓" : "↑") : ""}
+                {termKey ? <Term k={termKey}>{label}</Term> : label}{" "}
+                {sortKey === k ? (dir === -1 ? "↓" : "↑") : ""}
               </th>
             ))}
           </tr>
@@ -78,14 +87,23 @@ export default function TeamTable({ rows }) {
                 </Link>
               </td>
               <td>
-                {d.tierText ? (
-                  <span className="status" style={{ color: TIER_DOT[tierClass(d.tierText)] }}>
-                    <span className="dot" style={{ background: TIER_DOT[tierClass(d.tierText)] }} />
-                    {d.tierText}
-                  </span>
-                ) : (
-                  <span className="muted">—</span>
-                )}
+                {(() => {
+                  const t = effective(d);
+                  if (!t.label) return <span className="muted">—</span>;
+                  const s = (
+                    <span className="status" style={{ color: TIER_DOT[t.cls] }}>
+                      <span className="dot" style={{ background: TIER_DOT[t.cls] }} />
+                      {t.label}
+                    </span>
+                  );
+                  return t.amazon ? (
+                    <span className="term" tabIndex={0} data-tip={`Amazon's official tier is ${t.amazon}, but this score (under 70) is a problem week — we surface it as At Risk.`}>
+                      {s}
+                    </span>
+                  ) : (
+                    s
+                  );
+                })()}
               </td>
               <td>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
