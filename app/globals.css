@@ -1,5 +1,5 @@
 /* DA Scorecard HQ — v3 design system (SnowUI tokens on Breez midnight) */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Dancing+Script:wght@500;600&display=swap");
 
 :root {
   /* surfaces */
@@ -489,7 +489,7 @@ table.data tr:hover td { background: rgba(255, 255, 255, 0.025); }
 
 @media print {
   body { background: #fff; color: #111; }
-  .sidebar, .no-print { display: none !important; }
+  .sidebar, .no-print, .mobilebar { display: none !important; }
   .report { background: #fff; color: #111; }
   .report h3, .sig { color: #555; }
 }
@@ -542,3 +542,173 @@ table.data tr:hover td { background: rgba(255, 255, 255, 0.025); }
   .report { padding: 22px 18px; }
   .sig-row { flex-direction: column; gap: 26px; }
 }
+
+/* ---------- v4: light theme ---------- */
+[data-theme="light"] {
+  --bg: #f6f7fa;
+  --card: #ffffff;
+  --card-2: #eef0f5;
+  --line: rgba(17, 19, 26, 0.08);
+  --line-strong: rgba(17, 19, 26, 0.16);
+  --txt: #181b24;
+  --txt-2: rgba(24, 27, 36, 0.5);
+  --txt-3: rgba(24, 27, 36, 0.32);
+
+  --primary: #6f6fe0;
+  --blue: #2f7fd6;
+  --mint: #14937f;
+  --green: #1f9d4d;
+  --purple: #8a55cc;
+  --cyan: #4f74b5;
+  --red: #d9534f;
+  --amber: #c07c14;
+
+  --breeze-soft: rgba(111, 111, 224, 0.12);
+}
+
+[data-theme="light"] .card { box-shadow: 0 1px 2px rgba(17, 19, 26, 0.05); }
+[data-theme="light"] .panel { box-shadow: 0 1px 2px rgba(17, 19, 26, 0.05); }
+[data-theme="light"] .sidebar { background: #ffffff; }
+[data-theme="light"] .mobilebar { background: rgba(246, 247, 250, 0.92); }
+[data-theme="light"] .nav-link.active { background: #181b24; color: #fff; }
+[data-theme="light"] .meter, [data-theme="light"] .scorebar { background: rgba(17, 19, 26, 0.08); }
+[data-theme="light"] .dcard .mini div { background: rgba(17, 19, 26, 0.04); }
+[data-theme="light"] table.data td { border-bottom-color: rgba(17, 19, 26, 0.05); }
+[data-theme="light"] table.data tr:hover td { background: rgba(17, 19, 26, 0.025); }
+[data-theme="light"] .chip { background: rgba(17, 19, 26, 0.06); color: var(--txt-2); }
+[data-theme="light"] .chip.bad { background: rgba(217, 83, 79, 0.1); color: var(--red); }
+[data-theme="light"] .chip.warn { background: rgba(192, 124, 20, 0.1); color: var(--amber); }
+[data-theme="light"] .chip.ok { background: rgba(31, 157, 77, 0.1); color: var(--green); }
+[data-theme="light"] .dispute-select,
+[data-theme="light"] .dispute-note,
+[data-theme="light"] .driver-switcher,
+[data-theme="light"] .coach-form input,
+[data-theme="light"] .coach-form select,
+[data-theme="light"] .coach-form textarea,
+[data-theme="light"] .login-card input,
+[data-theme="light"] .datefilter select,
+[data-theme="light"] .datefilter input { background: #fff; }
+[data-theme="light"] .sev-severe { background: rgba(217, 83, 79, 0.06); }
+[data-theme="light"] .sev-improve { background: rgba(192, 124, 20, 0.06); }
+[data-theme="light"] .sev-grow { background: rgba(47, 127, 214, 0.06); }
+[data-theme="light"] .sev-well { background: rgba(31, 157, 77, 0.06); }
+
+.theme-toggle {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--txt-2);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.theme-toggle:hover { background: var(--card); color: var(--txt); }
+.mobilebar .theme-toggle { margin: 0 0 0 auto; padding: 5px 10px; border: none; font-size: 16px; }
+
+/* ---------- v4: glossary tooltips ---------- */
+.term {
+  border-bottom: 1px dotted var(--txt-3);
+  cursor: help;
+  position: relative;
+  outline: none;
+}
+.term:hover::after, .term:focus::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 260px;
+  background: #181b24;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 10px 12px;
+  border-radius: 10px;
+  white-space: normal;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.term:hover::before, .term:focus::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #181b24;
+  z-index: 100;
+}
+
+/* ---------- v4: date filter ---------- */
+.datefilter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.datefilter select, .datefilter input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  color: var(--txt);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color-scheme: dark;
+}
+[data-theme="light"] .datefilter select, [data-theme="light"] .datefilter input { color-scheme: light; }
+.datefilter .count { color: var(--txt-2); font-size: 12.5px; margin-left: 4px; }
+
+/* ---------- v4: signatures ---------- */
+.sig-block { display: flex; gap: 24px; margin-top: 30px; flex-wrap: wrap; }
+.sig-card {
+  flex: 1;
+  min-width: 240px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.sig-card .role { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--txt-2); font-weight: 600; margin-bottom: 10px; }
+.signature {
+  font-family: "Dancing Script", cursive;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--txt);
+  line-height: 1.2;
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  min-height: 40px;
+}
+.sig-card .at { font-size: 11.5px; color: var(--txt-2); }
+.sig-pending { border-style: dashed; }
+.sign-cta { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.sign-cta input {
+  flex: 1;
+  min-width: 150px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--txt);
+  font-size: 14px;
+  font-family: inherit;
+}
+[data-theme="light"] .sign-cta input { background: #fff; }
+
+.report-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.report-row:last-child { border-bottom: none; }
+.report-row .grow { flex: 1; min-width: 160px; }
