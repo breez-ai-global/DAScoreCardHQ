@@ -68,7 +68,9 @@ export default function DriverDetail({ params }) {
   const history = weeks
     .map((wk) => driversForWeek(wk, data).find((d) => d.id === id))
     .filter(Boolean);
-  const current = history[history.length - 1];
+  // Anchor on the latest week with full scorecard data (the in-progress week
+  // only has partial delivery numbers).
+  const current = history.find((h) => h.week === week) || history[history.length - 1];
   if (!current)
     return (
       <Shell>
@@ -116,7 +118,7 @@ export default function DriverDetail({ params }) {
             )}
           </h1>
           <div className="muted" style={{ fontSize: 13.5 }}>
-            ID {id} · {fmt(current.delivered)} packages this week · Completion {fmt(current.dcr, "%")} ·
+            ID {id} · {fmt(current.delivered)} packages in {current.week} · Completion {fmt(current.dcr, "%")} ·
             Photos {fmt(current.pod, "%")} · {ins.events.feedback.length} complaint(s)
           </div>
         </div>
