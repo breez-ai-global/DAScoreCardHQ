@@ -1,13 +1,14 @@
 import Link from "next/link";
 import Shell from "../../components/Shell";
 import Avatar from "../../components/Avatar";
+import Term from "../../components/Term";
 import {
   loadData,
   latestWeek,
   driversForWeek,
   rankScore,
   fmt,
-  tierClass,
+  effectiveTier,
 } from "../../lib/data";
 import { scoreBand } from "../../lib/insights";
 
@@ -22,7 +23,17 @@ function DriverCard({ d, rank }) {
         <Avatar name={d.name} size={34} />
         <div>
           <div className="nm">{d.name}</div>
-          {d.tierText && <span className={`pill ${tierClass(d.tierText)}`}>{d.tierText}</span>}
+          {(() => {
+            const t = effectiveTier(d);
+            if (!t.label) return null;
+            return t.amazon ? (
+              <span className="term" tabIndex={0} data-tip={`Amazon's official tier is ${t.amazon}, but this overall score is in the red — treat as At Risk.`}>
+                <span className={`pill ${t.cls}`}>{t.label}</span>
+              </span>
+            ) : (
+              <span className={`pill ${t.cls}`}>{t.label}</span>
+            );
+          })()}
         </div>
         <span className="rank">#{rank}</span>
       </div>
@@ -39,17 +50,17 @@ function DriverCard({ d, rank }) {
 
       <div className="mini">
         <div>
-          <div className="k">Delivered</div>
+          <div className="k"><Term k="Delivered">Delivered</Term></div>
           <div className="v">{fmt(d.delivered)}</div>
         </div>
         <div>
-          <div className="k">Completion</div>
+          <div className="k"><Term k="Completion">Completion</Term></div>
           <div className="v" style={{ color: d.dcr !== null && d.dcr < 99 ? "var(--amber)" : undefined }}>
             {d.dcr !== null ? d.dcr + "%" : "—"}
           </div>
         </div>
         <div>
-          <div className="k">Photos</div>
+          <div className="k"><Term k="Photos">Photos</Term></div>
           <div className="v" style={{ color: d.pod !== null && d.pod < 98 ? "var(--red)" : undefined }}>
             {d.pod !== null ? d.pod + "%" : "—"}
           </div>

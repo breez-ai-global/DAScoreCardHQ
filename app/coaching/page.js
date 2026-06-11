@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Shell from "../../components/Shell";
 import CoachingBuilder from "../../components/CoachingBuilder";
+import ReportsList from "../../components/ReportsList";
 import { loadData, latestWeek, driversForWeek, driverEvents, pick } from "../../lib/data";
 
 export const dynamic = "force-static";
@@ -57,11 +58,13 @@ export default function CoachingPage() {
     <Shell>
       <h1 className="page-title">Coaching Reports</h1>
       <p className="page-sub">
-        Build a coaching report, warning, or success plan — then share it as a link or print it.
+        Build a coaching report, warning, or success plan — sign it as manager, then send the link
+        to the DA to e-sign.
       </p>
       <Suspense>
         <CoachingBuilder drivers={options} />
       </Suspense>
+      <ReportsList />
     </Shell>
   );
 }
