@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Shell from "../../../components/Shell";
 import DriverSwitcher from "../../../components/DriverSwitcher";
+import DailyTable from "../../../components/DailyTable";
+import Term from "../../../components/Term";
 import {
   loadData,
   allWeeks,
@@ -10,7 +12,7 @@ import {
   fmt,
   pick,
   metricTier,
-  tierClass,
+  effectiveTier,
 } from "../../../lib/data";
 import { driverInsights, scoreBand } from "../../../lib/insights";
 
@@ -113,13 +115,23 @@ export default function DriverDetail({ params }) {
         <div>
           <h1 className="page-title" style={{ marginBottom: 2 }}>
             {current.name}{" "}
-            {current.tierText && (
-              <span className={`pill ${tierClass(current.tierText)}`}>{current.tierText}</span>
-            )}
+            {(() => {
+              const t = effectiveTier(current);
+              if (!t.label) return null;
+              return t.amazon ? (
+                <span className="term" tabIndex={0} data-tip={`Amazon's official tier is ${t.amazon}, but a sub-70 overall score is a problem week — shown as At Risk.`}>
+                  <span className={`pill ${t.cls}`}>{t.label}</span>
+                </span>
+              ) : (
+                <span className={`pill ${t.cls}`}>{t.label}</span>
+              );
+            })()}
           </h1>
           <div className="muted" style={{ fontSize: 13.5 }}>
-            ID {id} · {fmt(current.delivered)} packages in {current.week} · Completion {fmt(current.dcr, "%")} ·
-            Photos {fmt(current.pod, "%")} · {ins.events.feedback.length} complaint(s)
+            ID {id} · {fmt(current.delivered)} packages in {current.week} ·{" "}
+            <Term k="Completion">Completion</Term> {fmt(current.dcr, "%")} ·{" "}
+            <Term k="Photos">Photos</Term> {fmt(current.pod, "%")} ·{" "}
+            <Term k="Complaints">{`${ins.events.feedback.length} complaint(s)`}</Term>
           </div>
         </div>
         <div className="no-print" style={{ marginLeft: "auto" }}>
@@ -181,25 +193,16 @@ export default function DriverDetail({ params }) {
       {dailyRows.length > 0 && (
         <div className="panel">
           <h2>Daily Breakdown</h2>
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Date</th><th>Delivered</th><th>DCR</th><th>POD</th><th>CDF DPMO</th><th>DSB</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dailyRows.map(({ day, row }) => (
-                <tr key={day}>
-                  <td>{day}</td>
-                  <td>{pick(row, "packages delivered", "delivered") || "—"}</td>
-                  <td>{pick(row, "dcr") || "—"}</td>
-                  <td>{pick(row, "pod") || "—"}</td>
-                  <td>{pick(row, "cdf dpmo", "cdf") || "—"}</td>
-                  <td>{pick(row, "dsb") || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DailyTable
+            rows={dailyRows.map(({ day, row }) => ({
+              day,
+              delivered: pick(row, "packages delivered", "delivered") || "—",
+              dcr: pick(row, "dcr") || "—",
+              pod: pick(row, "pod") || "—",
+              cdf: pick(row, "cdf dpmo", "cdf") || "—",
+              dsb: pick(row, "dsb") || "—",
+            }))}
+          />
         </div>
       )}
     </Shell>
