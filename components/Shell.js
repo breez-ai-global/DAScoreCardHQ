@@ -1,7 +1,13 @@
 import Logo from "./Logo";
 import NavLinks from "./NavLinks";
+import { loadData } from "../lib/data";
+import { disputeFlags } from "../lib/insights";
 
 export default function Shell({ children }) {
+  let disputeCount = 0;
+  try {
+    disputeCount = disputeFlags(loadData()).length;
+  } catch {}
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -12,7 +18,7 @@ export default function Shell({ children }) {
             <div className="sub">DA Scorecard HQ</div>
           </div>
         </div>
-        <NavLinks />
+        <NavLinks disputeCount={disputeCount} />
       </aside>
       <main className="main">{children}</main>
     </div>
