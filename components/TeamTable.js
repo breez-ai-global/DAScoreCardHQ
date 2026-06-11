@@ -2,6 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import Avatar from "./Avatar";
+
+const TIER_DOT = {
+  platinum: "var(--primary)",
+  gold: "var(--amber)",
+  silver: "var(--cyan)",
+  bronze: "var(--red)",
+  neutral: "var(--txt-2)",
+};
 
 const COLS = [
   ["name", "Driver"],
@@ -48,7 +57,7 @@ export default function TeamTable({ rows }) {
   }
 
   return (
-    <div style={{ overflowX: "auto" }}>
+    <div className="table-wrap">
       <table className="data">
         <thead>
           <tr>
@@ -63,11 +72,17 @@ export default function TeamTable({ rows }) {
           {sorted.map((d) => (
             <tr key={d.id}>
               <td>
-                <Link href={`/drivers/${encodeURIComponent(d.id)}`}>{d.name}</Link>
+                <Link href={`/drivers/${encodeURIComponent(d.id)}`} className="who">
+                  <Avatar name={d.name} />
+                  <span style={{ color: "var(--txt)", fontWeight: 500 }}>{d.name}</span>
+                </Link>
               </td>
               <td>
                 {d.tierText ? (
-                  <span className={`pill ${tierClass(d.tierText)}`}>{d.tierText}</span>
+                  <span className="status" style={{ color: TIER_DOT[tierClass(d.tierText)] }}>
+                    <span className="dot" style={{ background: TIER_DOT[tierClass(d.tierText)] }} />
+                    {d.tierText}
+                  </span>
                 ) : (
                   <span className="muted">—</span>
                 )}
