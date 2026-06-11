@@ -27,7 +27,11 @@ export default function ConcessionsPage() {
     (pick(b, "concession date") || "").localeCompare(pick(a, "concession date") || "")
   );
 
-  const dsbImpact = events.filter((e) => /^y/i.test(pick(e, "impacts dsb") || ""));
+  const impactsDsbVal = (e) => {
+    const v = pick(e, "impacts dsb");
+    return num(v) === 1 || /^y/i.test(v || "");
+  };
+  const dsbImpact = events.filter(impactsDsbVal);
   const unattended = events.filter((e) => /unattended/i.test(pick(e, "delivery type") || ""));
   const byDriver = {};
   for (const e of events) {
@@ -69,7 +73,7 @@ export default function ConcessionsPage() {
       <div className="feed">
         {events.map((e, i) => {
           const name = pick(e, "delivery associate name") || "Unknown";
-          const impactsDsb = /^y/i.test(pick(e, "impacts dsb") || "");
+          const impactsDsb = impactsDsbVal(e);
           return (
             <FeedItem
               key={i}
