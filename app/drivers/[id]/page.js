@@ -1,15 +1,18 @@
 import Link from "next/link";
 import Shell from "../../../components/Shell";
+import DriverSwitcher from "../../../components/DriverSwitcher";
 import {
   loadData,
   allWeeks,
+  latestWeek,
   driversForWeek,
-  driverEvents,
+  rankScore,
   fmt,
   pick,
   metricTier,
   tierClass,
 } from "../../../lib/data";
+import { driverInsights, scoreBand } from "../../../lib/insights";
 
 export const dynamic = "force-static";
 export const dynamicParams = false;
@@ -23,10 +26,45 @@ export function generateStaticParams() {
   return [...ids].map((id) => ({ id: encodeURIComponent(id) }));
 }
 
+function Section({ kind, title, sub, entries }) {
+  if (!entries.length) return null;
+  return (
+    <div className={`sev sev-${kind}`}>
+      <div className="sev-head">
+        {title} <span className="muted">· {sub}</span>
+      </div>
+      <ul>
+        {entries.map((e, i) => (
+          <li key={i}>
+            <b>{e.title}</b>
+            {e.note && <div className="sev-note">{e.note}</div>}
+            {e.items && (
+              <div className="sev-items">
+                {e.items.map((it, j) => (
+                  <div key={j} className="sev-item">
+                    • <b>{it.label}</b>
+                    <div className="muted" style={{ fontSize: 12 }}>
+                      {it.date} {it.ref && `· ${it.ref}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function DriverDetail({ params }) {
   const id = decodeURIComponent(params.id);
   const data = loadData();
   const weeks = allWeeks(data);
+  const week = latestWeek(data);
+  const roster = week
+    ? driversForWeek(week, data).sort((a, b) => rankScore(b) - rankScore(a))
+    : [];
   const history = weeks
     .map((wk) => driversForWeek(wk, data).find((d) => d.id === id))
     .filter(Boolean);
@@ -39,7 +77,8 @@ export default function DriverDetail({ params }) {
       </Shell>
     );
 
-  const events = driverEvents(id, current.name, data);
+  const ins = driverInsights(current, data);
+  const [, scoreColor] = scoreBand(current.overall);
 
   const days = Object.keys(data.daily).sort();
   const dailyRows = days
@@ -55,33 +94,63 @@ export default function DriverDetail({ params }) {
 
   return (
     <Shell>
-      <p style={{ marginBottom: 8 }}>
-        <Link href="/drivers">← Drivers</Link>
-      </p>
-      <h1 className="page-title">
-        {current.name}{" "}
-        {current.tierText && (
-          <span className={`pill ${tierClass(current.tierText)}`}>{current.tierText}</span>
-        )}
-      </h1>
-      <p className="page-sub">Transporter ID: {id}</p>
-
-      <div className="cards">
-        <Metric label="Overall Score" value={fmt(current.overall)} />
-        <Metric label="Delivered" value={fmt(current.delivered)} />
-        <Metric label="DCR" value={fmt(current.dcr, current.dcr !== null ? "%" : "")} cls={metricTier(current.dcr, "dcr")[1]} />
-        <Metric label="POD" value={fmt(current.pod, current.pod !== null ? "%" : "")} cls={metricTier(current.pod, "pod")[1]} />
-        <Metric label="CDF DPMO" value={fmt(current.cdf)} cls={metricTier(current.cdf, "cdf")[1]} />
-        <Metric label="Neg. Feedback" value={events.feedback.length} cls={events.feedback.length ? "tier-poor" : "tier-great"} />
-        <Metric label="Concessions" value={events.concessions.length} cls={events.concessions.length ? "tier-poor" : "tier-great"} />
-        <Metric label="RTS Events" value={events.rts.length} cls={events.rts.length ? "tier-fair" : "tier-great"} />
+      <div className="panel" style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        <div>
+          <b>Driver Deep-Dive</b>
+          <div className="muted" style={{ fontSize: 13 }}>
+            Pick a driver to see what&apos;s going well, what needs work, and what&apos;s urgent.
+          </div>
+        </div>
+        <div style={{ marginLeft: "auto" }}>
+          <DriverSwitcher drivers={roster} currentId={id} />
+        </div>
       </div>
 
-      <div className="toolbar no-print">
-        <Link className="btn" href={`/coaching?driver=${encodeURIComponent(id)}`}>
-          ✎ Create Coaching Report
-        </Link>
+      <div className="panel" style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 44, fontWeight: 800, color: scoreColor }}>{current.overall ?? "—"}</div>
+        <div>
+          <h1 className="page-title" style={{ marginBottom: 2 }}>
+            {current.name}{" "}
+            {current.tierText && (
+              <span className={`pill ${tierClass(current.tierText)}`}>{current.tierText}</span>
+            )}
+          </h1>
+          <div className="muted" style={{ fontSize: 13.5 }}>
+            ID {id} · {fmt(current.delivered)} packages this week · Completion {fmt(current.dcr, "%")} ·
+            Photos {fmt(current.pod, "%")} · {ins.events.feedback.length} complaint(s)
+          </div>
+        </div>
+        <div className="no-print" style={{ marginLeft: "auto" }}>
+          <Link className="btn" href={`/coaching?driver=${encodeURIComponent(id)}`}>
+            ✎ Coaching Report
+          </Link>
+        </div>
       </div>
+
+      <Section
+        kind="severe"
+        title="🚨 SEVERE — FIX THIS NOW"
+        sub="events that are actively hurting the scorecard or are a safety/liability risk"
+        entries={ins.severe}
+      />
+      <Section
+        kind="improve"
+        title="⚠ NEEDS IMPROVEMENT"
+        sub="specific things to coach this week"
+        entries={ins.improve}
+      />
+      <Section
+        kind="grow"
+        title="🌱 ROOM TO GROW"
+        sub="near-misses and easy wins to get to the next tier"
+        entries={ins.grow}
+      />
+      <Section
+        kind="well"
+        title="✅ DOING WELL — CALL IT OUT"
+        sub="recognize these in the next standup"
+        entries={ins.well}
+      />
 
       <div className="panel">
         <h2>Weekly History</h2>
@@ -131,43 +200,6 @@ export default function DriverDetail({ params }) {
           </table>
         </div>
       )}
-
-      <EventPanel title="Negative Feedback" rows={events.feedback} />
-      <EventPanel title="Concessions" rows={events.concessions} />
-      <EventPanel title="Return to Station" rows={events.rts} />
     </Shell>
-  );
-}
-
-function Metric({ label, value, cls = "" }) {
-  return (
-    <div className="card">
-      <div className="label">{label}</div>
-      <div className={`value ${cls}`}>{value}</div>
-    </div>
-  );
-}
-
-function EventPanel({ title, rows }) {
-  if (!rows.length) return null;
-  const cols = Object.keys(rows[0]).filter(
-    (k) => rows.some((r) => r[k] && r[k] !== "--")
-  );
-  return (
-    <div className="panel">
-      <h2>{title} ({rows.length})</h2>
-      <div style={{ overflowX: "auto" }}>
-        <table className="data">
-          <thead>
-            <tr>{cols.map((c) => <th key={c}>{c}</th>)}</tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i}>{cols.map((c) => <td key={c}>{r[c] || "—"}</td>)}</tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }
