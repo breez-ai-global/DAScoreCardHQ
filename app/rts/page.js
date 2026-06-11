@@ -1,5 +1,5 @@
 import Shell from "../../components/Shell";
-import FeedItem from "../../components/FeedItem";
+import FeedList from "../../components/FeedList";
 import { HBars } from "../../components/Charts";
 import { loadData, pick } from "../../lib/data";
 import { rtsPlain } from "../../lib/insights";
@@ -56,35 +56,29 @@ export default function RtsPage() {
         <HBars items={Object.entries(byReason).sort((a, b) => b[1] - a[1])} color="var(--amber)" />
       </div>
 
-      <div className="kicker">Every return, newest first</div>
-      <div className="feed">
-        {events.map((e, i) => {
-          const name = pick(e, "delivery associate", "delivery associate name") || "Unknown";
+      <div className="kicker">Every return — filter by date below</div>
+      <FeedList
+        emptyText="No RTS events in this range. 🎉"
+        items={events.map((e) => {
           const impact = (pick(e, "impact dcr") || "").toUpperCase() === "Y";
           const note = pick(e, "additional information");
           const exempt = pick(e, "exemption reason") || "";
           const isExempt = exempt && !/no exemption/i.test(exempt) && exempt !== "--";
-          return (
-            <FeedItem
-              key={i}
-              name={name}
-              driverId={pick(e, "transporter id") || ""}
-              tag={rtsPlain(pick(e, "da selected rts code"))}
-              tagClass={impact ? "bad" : "ok"}
-              quote={
-                isExempt
-                  ? `Exempted (${exempt}) — no score impact`
-                  : impact
-                  ? `Counting against DCR${note ? ` · ${note}` : ""}`
-                  : note || null
-              }
-              meta={pick(e, "tracking id")}
-              when={(pick(e, "planned delivery date") || "").slice(0, 10)}
-            />
-          );
+          return {
+            name: pick(e, "delivery associate", "delivery associate name") || "Unknown",
+            driverId: pick(e, "transporter id") || "",
+            tag: rtsPlain(pick(e, "da selected rts code")),
+            tagClass: impact ? "bad" : "ok",
+            quote: isExempt
+              ? `Exempted (${exempt}) — no score impact`
+              : impact
+              ? `Counting against DCR${note ? ` · ${note}` : ""}`
+              : note || null,
+            meta: pick(e, "tracking id"),
+            when: (pick(e, "planned delivery date") || "").slice(0, 10),
+          };
         })}
-        {!events.length && <p className="muted">No RTS events recorded. 🎉</p>}
-      </div>
+      />
     </Shell>
   );
 }

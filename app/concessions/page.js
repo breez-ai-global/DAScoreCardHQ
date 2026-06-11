@@ -1,5 +1,5 @@
 import Shell from "../../components/Shell";
-import FeedItem from "../../components/FeedItem";
+import FeedList from "../../components/FeedList";
 import { loadData, pick, num } from "../../lib/data";
 
 export const dynamic = "force-static";
@@ -69,26 +69,22 @@ export default function ConcessionsPage() {
         </div>
       </div>
 
-      <div className="kicker">Every concession, newest first</div>
-      <div className="feed">
-        {events.map((e, i) => {
-          const name = pick(e, "delivery associate name") || "Unknown";
+      <div className="kicker">Every concession — filter by date below</div>
+      <FeedList
+        emptyText="No concessions in this range. 🎉"
+        items={events.map((e) => {
           const impactsDsb = impactsDsbVal(e);
-          return (
-            <FeedItem
-              key={i}
-              name={name}
-              driverId={pick(e, "delivery associate") || ""}
-              tag={reasonOf(e)}
-              tagClass={impactsDsb ? "bad" : "warn"}
-              quote={`${pick(e, "delivery type") || "—"} delivery${impactsDsb ? " · counting against DSB" : " · not scored"}`}
-              meta={pick(e, "tracking id")}
-              when={(pick(e, "concession date") || pick(e, "delivery date") || "").slice(0, 10)}
-            />
-          );
+          return {
+            name: pick(e, "delivery associate name") || "Unknown",
+            driverId: pick(e, "delivery associate") || "",
+            tag: reasonOf(e),
+            tagClass: impactsDsb ? "bad" : "warn",
+            quote: `${pick(e, "delivery type") || "—"} delivery${impactsDsb ? " · counting against DSB" : " · not scored"}`,
+            meta: pick(e, "tracking id"),
+            when: (pick(e, "concession date") || pick(e, "delivery date") || "").slice(0, 10),
+          };
         })}
-        {!events.length && <p className="muted">No concessions recorded. 🎉</p>}
-      </div>
+      />
     </Shell>
   );
 }

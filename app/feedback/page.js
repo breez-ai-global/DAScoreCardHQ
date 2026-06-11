@@ -1,5 +1,5 @@
 import Shell from "../../components/Shell";
-import FeedItem from "../../components/FeedItem";
+import FeedList from "../../components/FeedList";
 import { HBars } from "../../components/Charts";
 import { loadData, pick } from "../../lib/data";
 import { complaintType } from "../../lib/insights";
@@ -64,26 +64,22 @@ export default function FeedbackPage() {
         <HBars items={Object.entries(byType).sort((a, b) => b[1] - a[1])} color="var(--red)" />
       </div>
 
-      <div className="kicker">All complaints, newest first</div>
-      <div className="feed">
-        {events.map((e, i) => {
+      <div className="kicker">All complaints — filter by date below</div>
+      <FeedList
+        emptyText="No complaints in this range. 🎉"
+        items={events.map((e) => {
           const t = complaintType(e);
-          const name = pick(e, "delivery associate name") || "Unknown";
-          return (
-            <FeedItem
-              key={i}
-              name={name}
-              driverId={pick(e, "delivery associate") || ""}
-              tag={t}
-              tagClass={SEVERITY[t] || "warn"}
-              quote={pick(e, "feedback details") ? `“${pick(e, "feedback details")}”` : null}
-              meta={pick(e, "tracking id")}
-              when={(pick(e, "delivery date") || "").slice(0, 10)}
-            />
-          );
+          return {
+            name: pick(e, "delivery associate name") || "Unknown",
+            driverId: pick(e, "delivery associate") || "",
+            tag: t,
+            tagClass: SEVERITY[t] || "warn",
+            quote: pick(e, "feedback details") ? `“${pick(e, "feedback details")}”` : null,
+            meta: pick(e, "tracking id"),
+            when: (pick(e, "delivery date") || "").slice(0, 10),
+          };
         })}
-        {!events.length && <p className="muted">No complaints recorded. 🎉</p>}
-      </div>
+      />
     </Shell>
   );
 }
