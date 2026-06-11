@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Shell from "../components/Shell";
 import TeamTable from "../components/TeamTable";
+import Term from "../components/Term";
 import { Donut, HBars } from "../components/Charts";
 import { loadData, latestWeek, fmt, pick, num } from "../lib/data";
 import { overview, scoreBand } from "../lib/insights";
@@ -57,32 +58,32 @@ export default function Dashboard() {
 
       <div className="cards">
         <div className="card lift-a">
-          <div className="label">Team Avg Score</div>
+          <div className="label"><Term k="Score">Team Avg Score</Term></div>
           <div className="value">{o.avgScore !== null ? o.avgScore.toFixed(1) : "—"}</div>
           <div className="tier muted">out of 100</div>
         </div>
         <div className="card">
-          <div className="label">Drivers at Platinum</div>
+          <div className="label"><Term k="Tier">Drivers at Platinum</Term></div>
           <div className="value tier-great">{o.platinum}/{o.total}</div>
           <div className="tier muted">top tier this week</div>
         </div>
         <div className="card lift-b">
-          <div className="label">Packages Delivered</div>
+          <div className="label"><Term k="Delivered">Packages Delivered</Term></div>
           <div className="value">{fmt(o.delivered)}</div>
           <div className="tier muted">across the whole team</div>
         </div>
         <div className="card">
-          <div className="label">Customer Complaints</div>
+          <div className="label"><Term k="CDF">Customer Complaints</Term></div>
           <div className="value tier-poor">{o.complaintsTotal}</div>
           <div className="tier muted">negative feedback events</div>
         </div>
         <div className="card">
-          <div className="label">Controllable Returns</div>
+          <div className="label"><Term k="Controllable Returns">Controllable Returns</Term></div>
           <div className="value tier-poor">{o.controllable}</div>
           <div className="tier muted">returns the team could have prevented</div>
         </div>
         <div className="card">
-          <div className="label">Flagged for Dispute</div>
+          <div className="label"><Term k="Urgent Items">Flagged for Dispute</Term></div>
           <div className="value tier-fair">{o.disputeCount}</div>
           <div className="tier"><Link href="/disputes">items worth a second look →</Link></div>
         </div>
@@ -117,14 +118,15 @@ export default function Dashboard() {
 
       <div className="grid-2">
         <div className="panel">
-          <h2>Team Standing Mix</h2>
+          <h2><Term k="Tier">Team Standing Mix</Term></h2>
           <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
-            How many drivers landed in each tier this week. Platinum = best, Bronze = worst.
+            How many drivers landed in each tier this week. Anyone under a 70 score shows as At Risk
+            — whatever Amazon calls them.
           </p>
           <Donut mix={o.mix} />
         </div>
         <div className="panel">
-          <h2>What Customers Complained About</h2>
+          <h2><Term k="CDF">What Customers Complained About</Term></h2>
           <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
             Every negative piece of customer feedback this week, grouped by type.
           </p>
@@ -137,7 +139,7 @@ export default function Dashboard() {
       </div>
 
       <div className="panel">
-        <h2>Driver Scores, Ranked</h2>
+        <h2><Term k="Score">Driver Scores, Ranked</Term></h2>
         <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
           Overall weekly score out of 100. Green = safe (85+), yellow = watch (70–85), red = needs
           attention (&lt;70).
@@ -147,14 +149,14 @@ export default function Dashboard() {
 
       <div className="grid-2">
         <div className="panel">
-          <h2>Why Packages Came Back to the Station</h2>
+          <h2><Term k="RTS">Why Packages Came Back to the Station</Term></h2>
           <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
             Every package returned undelivered (RTS), grouped by the reason the driver selected.
           </p>
           {rtsItems.length ? <HBars items={rtsItems} color="var(--amber)" /> : <p className="muted">No RTS events.</p>}
         </div>
         <div className="panel">
-          <h2>Photo Quality by Driver (POD)</h2>
+          <h2><Term k="POD">Photo Quality by Driver (POD)</Term></h2>
           <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
             % of delivery photos that passed Amazon&apos;s quality check. Below 98% starts costing
             points. Lowest ten shown.
@@ -166,7 +168,8 @@ export default function Dashboard() {
       <div className="panel">
         <h2>Full Team Table</h2>
         <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
-          Click any column header to sort. Click a driver&apos;s name to open their full breakdown.
+          Click any column header to sort. Hover a header for what the code means. Click a driver
+          for their full breakdown.
         </p>
         <TeamTable rows={tableRows} />
       </div>
