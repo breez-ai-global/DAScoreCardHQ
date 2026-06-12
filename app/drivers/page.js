@@ -2,6 +2,7 @@ import Link from "next/link";
 import Shell from "../../components/Shell";
 import Avatar from "../../components/Avatar";
 import Term from "../../components/Term";
+import { tierTipText } from "../../lib/tiers";
 import {
   loadData,
   latestWeek,
@@ -27,7 +28,7 @@ function DriverCard({ d, rank }) {
             const t = effectiveTier(d);
             if (!t.label) return null;
             return t.amazon ? (
-              <span className="term" tabIndex={0} data-tip={`Amazon's official tier is ${t.amazon}, but this overall score is in the red — treat as At Risk.`}>
+              <span className="term" tabIndex={0} data-tip={tierTipText(t, d.overall)}>
                 <span className={`pill ${t.cls}`}>{t.label}</span>
               </span>
             ) : (
