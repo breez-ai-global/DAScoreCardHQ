@@ -3,6 +3,7 @@ import Shell from "../../../components/Shell";
 import DriverSwitcher from "../../../components/DriverSwitcher";
 import DailyTable from "../../../components/DailyTable";
 import Term from "../../../components/Term";
+import { tierTipText } from "../../../lib/tiers";
 import {
   loadData,
   allWeeks,
@@ -119,7 +120,7 @@ export default function DriverDetail({ params }) {
               const t = effectiveTier(current);
               if (!t.label) return null;
               return t.amazon ? (
-                <span className="term" tabIndex={0} data-tip={`Amazon's official tier is ${t.amazon}, but a sub-70 overall score is a problem week — shown as At Risk.`}>
+                <span className="term" tabIndex={0} data-tip={tierTipText(t, current.overall)}>
                   <span className={`pill ${t.cls}`}>{t.label}</span>
                 </span>
               ) : (
