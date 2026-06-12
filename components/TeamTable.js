@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import Avatar from "./Avatar";
 import Term from "./Term";
+import { scoreTier, tierTipText } from "../lib/tiers";
 
 const TIER_DOT = {
   platinum: "var(--primary)",
   gold: "var(--amber)",
   silver: "var(--cyan)",
-  bronze: "var(--red)",
+  bronze: "#ff9e7a",
+  risk: "var(--red)",
   neutral: "var(--txt-2)",
 };
 
@@ -25,20 +27,9 @@ const COLS = [
   ["urgent", "Urgent Items", "Urgent Items"],
 ];
 
-function tierClass(t) {
-  const s = (t || "").toLowerCase();
-  if (s.includes("platinum")) return "platinum";
-  if (s.includes("gold")) return "gold";
-  if (s.includes("silver")) return "silver";
-  if (s.includes("bronze")) return "bronze";
-  return "neutral";
-}
-
-// Anyone with an overall score under 70 is shown as At Risk, whatever Amazon says.
+// Breez tier scale, computed from the score (Amazon's label only as reference).
 function effective(d) {
-  if (d.overall !== null && d.overall !== undefined && d.overall < 70)
-    return { label: "At Risk", cls: "bronze", amazon: d.tierText };
-  return { label: d.tierText, cls: tierClass(d.tierText), amazon: null };
+  return scoreTier(d.overall ?? null, d.tierText || null);
 }
 
 export default function TeamTable({ rows }) {
@@ -97,7 +88,7 @@ export default function TeamTable({ rows }) {
                     </span>
                   );
                   return t.amazon ? (
-                    <span className="term" tabIndex={0} data-tip={`Amazon's official tier is ${t.amazon}, but this score (under 70) is a problem week — we surface it as At Risk.`}>
+                    <span className="term" tabIndex={0} data-tip={tierTipText(t, d.overall)}>
                       {s}
                     </span>
                   ) : (
