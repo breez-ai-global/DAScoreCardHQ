@@ -65,7 +65,7 @@ export default function Dashboard() {
         <div className="card">
           <div className="label"><Term k="Tier">Drivers at Platinum</Term></div>
           <div className="value tier-great">{o.platinum}/{o.total}</div>
-          <div className="tier muted">top tier this week</div>
+          <div className="tier muted">scored 98+ this week</div>
         </div>
         <div className="card lift-b">
           <div className="label"><Term k="Delivered">Packages Delivered</Term></div>
@@ -93,7 +93,7 @@ export default function Dashboard() {
         <h2>📝 This Week in Plain English</h2>
         <p className="plain">
           The team delivered <b>{fmt(o.delivered)} packages</b> this week with{" "}
-          <b>{o.platinum} of {o.total} drivers in Platinum</b>. Top performers:{" "}
+          <b>{o.platinum} of {o.total} drivers at Platinum (98+)</b>. Top performers:{" "}
           <b>{o.top3.map((d) => shortName(d.name)).join(", ")}</b>.
         </p>
         {attention.length > 0 && (
@@ -120,8 +120,8 @@ export default function Dashboard() {
         <div className="panel">
           <h2><Term k="Tier">Team Standing Mix</Term></h2>
           <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
-            How many drivers landed in each tier this week. Anyone under a 70 score shows as At Risk
-            — whatever Amazon calls them.
+            Breez scale, straight from the score: Platinum 98+ · Gold 90+ · Silver 80+ · Bronze 70+
+            · At Risk under 70.
           </p>
           <Donut mix={o.mix} />
         </div>
