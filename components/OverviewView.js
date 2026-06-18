@@ -73,7 +73,7 @@ export default function OverviewView({ byScope, generatedAt }) {
         <div className="card lift-a">
           <div className="label"><Term k="Score">Team Avg Score</Term></div>
           <div className="value">{o.avgScore !== null ? o.avgScore.toFixed(1) : "—"}</div>
-          <div className="tier muted">out of 100</div>
+          <div className="tier muted">Breez composite · out of 100</div>
         </div>
         <div className="card">
           <div className="label"><Term k="Tier">Drivers at Platinum</Term></div>
@@ -138,7 +138,7 @@ export default function OverviewView({ byScope, generatedAt }) {
           <h2><Term k="Tier">Team Standing Mix</Term></h2>
           <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
             Breez scale: Platinum 98+ · Gold 90+ · Silver 80+ · Bronze 70+ · At Risk under 70.
-            {scope === "all" ? " Based on each driver's volume-weighted average score." : ""}
+            {scope === "all" ? " Based on each driver's Breez composite score." : ""}
           </p>
           <Donut mix={o.mix} />
         </div>
@@ -158,8 +158,9 @@ export default function OverviewView({ byScope, generatedAt }) {
       <div className="panel">
         <h2><Term k="Score">Driver Scores, Ranked</Term></h2>
         <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
-          {scope === "all" ? "Volume-weighted average" : "Weekly"} score out of 100. Green = safe
-          (85+), yellow = watch (70–85), red = needs attention (&lt;70).
+          Breez composite score out of 100 — Amazon&apos;s base adjusted for volume, returns,
+          complaints &amp; concessions. Green = safe (85+), yellow = watch (70–85), red = needs
+          attention (&lt;70).
         </p>
         <HBars items={scoreItems} labelWidth={210} />
       </div>

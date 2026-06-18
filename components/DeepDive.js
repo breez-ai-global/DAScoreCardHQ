@@ -17,6 +17,15 @@ function fmt(v, suffix = "") {
   if (v === null || v === undefined) return "—";
   return (typeof v === "number" ? (v % 1 === 0 ? v.toLocaleString() : v.toFixed(2)) : v) + suffix;
 }
+function tierCls(t) {
+  const s = (t || "").toLowerCase();
+  if (s.includes("platinum")) return "platinum";
+  if (s.includes("gold")) return "gold";
+  if (s.includes("silver")) return "silver";
+  if (s.includes("bronze")) return "bronze";
+  if (s.includes("risk")) return "risk";
+  return "neutral";
+}
 
 function Section({ kind, title, sub, entries }) {
   if (!entries || !entries.length) return null;
@@ -65,6 +74,11 @@ export default function DeepDive({ id, roster, byScope, history, metricTierMap }
   const d = cur.rec;
   const t = scoreTier(d.overall ?? null, d.tierText || null);
   const color = scoreColor(d.overall);
+  const sp = d.scoreParts;
+  const amazonGap =
+    d.amazonOverall !== null && d.amazonOverall !== undefined && d.overall !== null
+      ? Math.round((d.overall - d.amazonOverall) * 10) / 10
+      : null;
 
   return (
     <>
@@ -74,7 +88,10 @@ export default function DeepDive({ id, roster, byScope, history, metricTierMap }
       </div>
 
       <div className="panel" style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 44, fontWeight: 800, color }}>{d.overall ?? "—"}</div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 44, fontWeight: 800, color, lineHeight: 1 }}>{d.overall ?? "—"}</div>
+          <div className="muted" style={{ fontSize: 10.5, letterSpacing: 0.4, textTransform: "uppercase" }}>Breez score</div>
+        </div>
         <div>
           <h1 className="page-title" style={{ marginBottom: 2 }}>
             {d.name}{" "}
@@ -93,11 +110,65 @@ export default function DeepDive({ id, roster, byScope, history, metricTierMap }
             <Term k="Photos">Photos</Term> {fmt(d.pod, "%")} ·{" "}
             <Term k="Complaints">{`${cur.complaints} complaint(s)`}</Term>
           </div>
+          {d.amazonOverall !== null && d.amazonOverall !== undefined && (
+            <div className="muted" style={{ fontSize: 12.5, marginTop: 3 }}>
+              Amazon raw score {fmt(d.amazonOverall)}
+              {amazonGap !== null && amazonGap !== 0 && (
+                <span style={{ color: amazonGap > 0 ? "var(--green)" : "var(--red)" }}>
+                  {" "}— Breez {amazonGap > 0 ? "adds" : "deducts"} {Math.abs(amazonGap)} for volume &amp; defects
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="no-print" style={{ marginLeft: "auto" }}>
           <Link className="btn" href={`/coaching?driver=${encodeURIComponent(id)}`}>✎ Coaching Report</Link>
         </div>
       </div>
+
+      {sp && sp.base !== null && (
+        <div className="panel">
+          <h2>How the Breez score is built</h2>
+          <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
+            Starts from Amazon&apos;s raw score, rewards proven volume at quality, and deducts for
+            returns, complaints, and concessions (measured per 1,000 packages so volume is fair).
+          </p>
+          <div className="score-build">
+            <div className="sb-item">
+              <div className="sb-label">Amazon base</div>
+              <div className="sb-val">{fmt(sp.base)}</div>
+            </div>
+            <div className="sb-op">+</div>
+            <div className="sb-item">
+              <div className="sb-label">Volume × quality bonus</div>
+              <div className="sb-val" style={{ color: sp.bonus > 0 ? "var(--green)" : "var(--txt-2)" }}>
+                {sp.bonus > 0 ? `+${fmt(sp.bonus)}` : "0"}
+              </div>
+            </div>
+            <div className="sb-op">−</div>
+            <div className="sb-item">
+              <div className="sb-label">Defect penalty</div>
+              <div className="sb-val" style={{ color: sp.penalty > 0 ? "var(--red)" : "var(--txt-2)" }}>
+                {sp.penalty > 0 ? `−${fmt(sp.penalty)}` : "0"}
+              </div>
+            </div>
+            <div className="sb-op">=</div>
+            <div className="sb-item">
+              <div className="sb-label">Breez score</div>
+              <div className="sb-val" style={{ color, fontWeight: 800 }}>{fmt(d.overall)}</div>
+            </div>
+          </div>
+          {sp.penalty > 0 && (
+            <div className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
+              Penalty breakdown:{" "}
+              {sp.parts.compPts > 0 && <span>complaints −{fmt(sp.parts.compPts)}{(sp.parts.rtsPts > 0 || sp.parts.concPts > 0) ? " · " : ""}</span>}
+              {sp.parts.rtsPts > 0 && <span>controllable returns −{fmt(sp.parts.rtsPts)}{sp.parts.concPts > 0 ? " · " : ""}</span>}
+              {sp.parts.concPts > 0 && <span>concessions −{fmt(sp.parts.concPts)}</span>}
+              {" "}(from {sp.parts.complaints} complaint(s), {sp.parts.controllableRts} controllable RTS, {sp.parts.concessions} concession(s))
+            </div>
+          )}
+        </div>
+      )}
 
       <Section kind="severe" title="🚨 SEVERE — FIX THIS NOW" sub="events actively hurting the scorecard or a safety/liability risk" entries={cur.severe} />
       <Section kind="improve" title="⚠ NEEDS IMPROVEMENT" sub="specific things to coach" entries={cur.improve} />
@@ -110,14 +181,15 @@ export default function DeepDive({ id, roster, byScope, history, metricTierMap }
           <table className="data">
             <thead>
               <tr>
-                <th>Week</th><th><Term k="Score">Score</Term></th><th><Term k="Delivered">Delivered</Term></th><th><Term k="DCR">DCR</Term></th><th><Term k="DSB">DSB</Term></th><th><Term k="POD">POD</Term></th><th><Term k="CDF">CDF</Term></th>
+                <th>Week</th><th>Breez</th><th>Amazon</th><th><Term k="Delivered">Delivered</Term></th><th><Term k="DCR">DCR</Term></th><th><Term k="DSB">DSB</Term></th><th><Term k="POD">POD</Term></th><th><Term k="CDF">CDF</Term></th>
               </tr>
             </thead>
             <tbody>
               {history.map((h) => (
                 <tr key={h.week} style={h.week === scope ? { background: "rgba(173,173,251,0.08)" } : undefined}>
                   <td>{h.week}</td>
-                  <td>{fmt(h.overall)}</td>
+                  <td style={{ fontWeight: 700 }}>{fmt(h.overall)}</td>
+                  <td className="muted">{fmt(h.amazonOverall)}</td>
                   <td>{fmt(h.delivered)}</td>
                   <td className={metricTierMap.dcr[h.week] || ""}>{fmt(h.dcr, h.dcr !== null ? "%" : "")}</td>
                   <td>{fmt(h.dsb)}</td>

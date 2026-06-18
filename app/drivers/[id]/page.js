@@ -31,8 +31,11 @@ function slimRec(d) {
   if (!d) return null;
   return {
     id: d.id, name: d.name, tierText: d.tierText, overall: d.overall,
+    amazonOverall: d.amazonOverall ?? null, scoreParts: d.scoreParts ?? null,
     delivered: d.delivered, dcr: d.dcr, pod: d.pod, cdf: d.cdf, dsb: d.dsb,
-    rtsCount: d.rtsCount, weeksActive: d.weeksActive || 1,
+    rtsCount: d.rtsCount, controllableRtsCount: d.controllableRtsCount || 0,
+    feedbackCount: d.feedbackCount || 0, concessionCount: d.concessionCount || 0,
+    weeksActive: d.weeksActive || 1,
   };
 }
 
@@ -70,18 +73,25 @@ export default function DriverDetail({ params }) {
     .sort((a, b) => rankScore(b) - rankScore(a))
     .map((d) => ({ id: d.id, name: d.name, tierText: d.tierText, overall: d.overall }));
 
-  // weekly history (for the table) + metric tier classes per week
+  // weekly history (for the table) + metric tier classes per week.
+  // Scores are the Breez composite for each week (Amazon kept as a reference column).
   const weeks = allWeeks(data);
   const history = weeks
-    .map((wk) => driversForWeek(wk, data).find((d) => d.id === id))
+    .map((wk) => driverForScope(id, wk, data))
     .filter(Boolean)
-    .map((h) => ({ week: h.week, overall: h.overall, delivered: h.delivered, dcr: h.dcr, dsb: h.dsb, pod: h.pod, cdf: h.cdf }));
+    .map((h) => ({
+      week: h.week, overall: h.overall, amazonOverall: h.amazonOverall ?? null,
+      delivered: h.delivered, dcr: h.dcr, dsb: h.dsb, pod: h.pod, cdf: h.cdf,
+    }));
   const metricTierMap = { dcr: {}, pod: {}, cdf: {} };
   for (const h of history) {
     metricTierMap.dcr[h.week] = metricTier(h.dcr, "dcr")[1];
     metricTierMap.pod[h.week] = metricTier(h.pod, "pod")[1];
     metricTierMap.cdf[h.week] = metricTier(h.cdf, "cdf")[1];
   }
+
+  const name = (history[history.length - 1] || {}).week ? roster.find((r) => r.id === id)?.name : null;
+  const dispName = roster.find((r) => r.id === id)?.name || id;
 
   const byScope = {};
   for (const s of scopes) {
