@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useDateFilter } from "./DateFilter";
+import { useScope } from "./ScopeProvider";
+import { weekOfDate } from "../lib/weekutil";
 
 const STATUSES = ["Needs review", "Will dispute", "Disputed - waiting", "Won", "Lost", "Not disputing"];
 const PRIORITY_DOT = { High: "var(--red)", Medium: "var(--amber)", "Look into": "var(--breeze)" };
 
 export default function DisputeCenter({ flags: allFlags }) {
-  const [flags, dateControls] = useDateFilter(allFlags, (f) => f.date);
+  const { scope } = useScope();
+  const scopedFlags = scope === "all" ? allFlags : allFlags.filter((f) => weekOfDate(f.date) === scope);
+  const [flags, dateControls] = useDateFilter(scopedFlags, (f) => f.date);
   const [state, setState] = useState({});
 
   useEffect(() => {
