@@ -11,12 +11,15 @@ function slim(d) {
     name: d.name,
     tierText: d.tierText,
     overall: d.overall,
+    amazonOverall: d.amazonOverall ?? null,
+    rankValue: d.rankValue ?? null,
     delivered: d.delivered,
     dcr: d.dcr,
     pod: d.pod,
     feedbackCount: d.feedbackCount,
     concessionCount: d.concessionCount,
     rtsEventCount: d.rtsEventCount,
+    controllableRtsCount: d.controllableRtsCount || 0,
     weeksActive: d.weeksActive || 1,
   };
 }
