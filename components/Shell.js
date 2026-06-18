@@ -1,6 +1,7 @@
 import Logo from "./Logo";
 import NavLinks from "./NavLinks";
 import ThemeToggle from "./ThemeToggle";
+import WeekPicker from "./WeekPicker";
 import { loadData } from "../lib/data";
 import { disputeFlags } from "../lib/insights";
 
@@ -20,6 +21,7 @@ export default function Shell({ children }) {
         <div className="mb-nav">
           <NavLinks disputeCount={disputeCount} />
         </div>
+        <div className="mb-week"><WeekPicker /></div>
       </div>
       <div className="shell">
         <aside className="sidebar">
@@ -33,7 +35,10 @@ export default function Shell({ children }) {
           <NavLinks disputeCount={disputeCount} />
           <ThemeToggle />
         </aside>
-        <main className="main">{children}</main>
+        <main className="main">
+          <div className="topbar no-print"><WeekPicker /></div>
+          {children}
+        </main>
       </div>
     </>
   );
