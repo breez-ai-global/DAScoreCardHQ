@@ -735,3 +735,28 @@ table.data tr:hover td { background: rgba(255, 255, 255, 0.025); }
 .mb-week .weekpicker select { flex: 1; }
 @media (min-width: 1021px) { .mb-week { display: none; } }
 @media (max-width: 1020px) { .topbar { display: none; } }
+
+/* ---------- v7: Breez composite score breakdown ---------- */
+.score-build {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.score-build .sb-item {
+  flex: 1;
+  min-width: 110px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+}
+[data-theme="light"] .score-build .sb-item { background: rgba(17, 19, 26, 0.04); }
+.score-build .sb-label { font-size: 11px; color: var(--txt-2); margin-bottom: 6px; }
+.score-build .sb-val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.score-build .sb-op { display: flex; align-items: center; font-size: 20px; color: var(--txt-3); font-weight: 700; }
+@media (max-width: 700px) {
+  .score-build { display: grid; grid-template-columns: 1fr 1fr; }
+  .score-build .sb-op { display: none; }
+}
