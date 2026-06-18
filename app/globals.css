@@ -712,3 +712,26 @@ table.data tr:hover td { background: rgba(255, 255, 255, 0.025); }
 }
 .report-row:last-child { border-bottom: none; }
 .report-row .grow { flex: 1; min-width: 160px; }
+
+/* ---------- v6: global week picker ---------- */
+.topbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.weekpicker { display: inline-flex; align-items: center; gap: 8px; }
+.weekpicker .wp-label { font-size: 12px; color: var(--txt-2); font-weight: 500; }
+.weekpicker select {
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  color: var(--txt);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  color-scheme: dark;
+}
+[data-theme="light"] .weekpicker select { background: #fff; color-scheme: light; }
+.mb-week { padding-bottom: 10px; }
+.mb-week .weekpicker { width: 100%; }
+.mb-week .weekpicker select { flex: 1; }
+@media (min-width: 1021px) { .mb-week { display: none; } }
+@media (max-width: 1020px) { .topbar { display: none; } }
