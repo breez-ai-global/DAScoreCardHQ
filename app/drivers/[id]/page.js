@@ -35,6 +35,7 @@ function slimRec(d) {
     delivered: d.delivered, dcr: d.dcr, pod: d.pod, cdf: d.cdf, dsb: d.dsb,
     rtsCount: d.rtsCount, controllableRtsCount: d.controllableRtsCount || 0,
     feedbackCount: d.feedbackCount || 0, concessionCount: d.concessionCount || 0,
+    safety: d.safety ?? null,
     weeksActive: d.weeksActive || 1,
   };
 }

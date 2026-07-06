@@ -115,7 +115,7 @@ export default function DeepDive({ id, roster, byScope, history, metricTierMap }
               Amazon raw score {fmt(d.amazonOverall)}
               {amazonGap !== null && amazonGap !== 0 && (
                 <span style={{ color: amazonGap > 0 ? "var(--green)" : "var(--red)" }}>
-                  {" "}— Breez {amazonGap > 0 ? "adds" : "deducts"} {Math.abs(amazonGap)} for volume &amp; defects
+                  {" "}— Breez {amazonGap > 0 ? "adds" : "deducts"} {Math.abs(amazonGap)} for volume, defects &amp; safety
                 </span>
               )}
             </div>
@@ -131,7 +131,7 @@ export default function DeepDive({ id, roster, byScope, history, metricTierMap }
           <h2>How the Breez score is built</h2>
           <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
             Starts from Amazon&apos;s raw score, rewards proven volume at quality, and deducts for
-            returns, complaints, and concessions (measured per 1,000 packages so volume is fair).
+            returns, complaints, concessions, and Netradyne driving-safety events.
           </p>
           <div className="score-build">
             <div className="sb-item">
@@ -152,6 +152,22 @@ export default function DeepDive({ id, roster, byScope, history, metricTierMap }
                 {sp.penalty > 0 ? `−${fmt(sp.penalty)}` : "0"}
               </div>
             </div>
+            <div className="sb-op">−</div>
+            <div className="sb-item">
+              <div className="sb-label">Driving safety</div>
+              <div className="sb-val" style={{ color: sp.safetyPts > 0 ? "var(--red)" : "var(--txt-2)" }}>
+                {sp.safetyPts > 0 ? `−${fmt(sp.safetyPts)}` : "0"}
+              </div>
+            </div>
+            {sp.starBonus > 0 && (
+              <>
+                <div className="sb-op">+</div>
+                <div className="sb-item">
+                  <div className="sb-label">DriverStars</div>
+                  <div className="sb-val" style={{ color: "var(--green)" }}>+{fmt(sp.starBonus)}</div>
+                </div>
+              </>
+            )}
             <div className="sb-op">=</div>
             <div className="sb-item">
               <div className="sb-label">Breez score</div>
@@ -167,6 +183,34 @@ export default function DeepDive({ id, roster, byScope, history, metricTierMap }
               {" "}(from {sp.parts.complaints} complaint(s), {sp.parts.controllableRts} controllable RTS, {sp.parts.concessions} concession(s))
             </div>
           )}
+        </div>
+      )}
+
+      {d.safety && d.safety.total > 0 && (
+        <div className="panel">
+          <h2>🚗 Driving Safety — Netradyne (last 30 days)</h2>
+          <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
+            On-road behavior from the Driver·i cameras. Driving events count against the score
+            harder than customer feedback. Third-party-caused events are exempt.
+          </p>
+          <div className="chips" style={{ marginBottom: 10 }}>
+            {d.safety.drowsiness > 0 && <span className="chip bad">{d.safety.drowsiness} drowsiness</span>}
+            {d.safety.distraction > 0 && <span className="chip bad">{d.safety.distraction} distraction</span>}
+            {d.safety.following > 0 && <span className="chip bad">{d.safety.following} following distance</span>}
+            {d.safety.seatbelt > 0 && <span className="chip bad">{d.safety.seatbelt} seatbelt</span>}
+            {d.safety.signSignal > 0 && <span className="chip bad">{d.safety.signSignal} sign/signal</span>}
+            {d.safety.speeding > 0 && <span className="chip bad">{d.safety.speeding} speeding</span>}
+            {d.safety.hardBraking > 0 && <span className="chip warn">{d.safety.hardBraking} hard braking</span>}
+            {d.safety.accel > 0 && <span className="chip warn">{d.safety.accel} hard acceleration</span>}
+            {d.safety.highG > 0 && <span className="chip warn">{d.safety.highG} high-G</span>}
+            {d.safety.backing > 0 && <span className="chip">{d.safety.backing} backing</span>}
+            {d.safety.thirdParty > 0 && <span className="chip ok">{d.safety.thirdParty} third-party (exempt)</span>}
+            {d.safety.stars > 0 && <span className="chip ok">★ {d.safety.stars} DriverStar{d.safety.stars > 1 ? "s" : ""}</span>}
+          </div>
+          <div className="muted" style={{ fontSize: 12.5 }}>
+            Weighted safety severity {fmt(sp?.parts?.safetySev)} → −{fmt(sp?.safetyPts)} points
+            {sp?.starBonus > 0 ? `, DriverStars +${fmt(sp.starBonus)}` : ""}.
+          </div>
         </div>
       )}
 
