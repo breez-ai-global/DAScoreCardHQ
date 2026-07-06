@@ -20,6 +20,8 @@ function slim(d) {
     concessionCount: d.concessionCount,
     rtsEventCount: d.rtsEventCount,
     controllableRtsCount: d.controllableRtsCount || 0,
+    safety: d.safety ?? null,
+    safetyPts: d.scoreParts?.safetyPts ?? 0,
     weeksActive: d.weeksActive || 1,
   };
 }

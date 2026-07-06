@@ -21,7 +21,8 @@ function fmt(v) {
 function DriverCard({ d, rank }) {
   const color = scoreColor(d.overall);
   const t = scoreTier(d.overall ?? null, d.tierText || null);
-  const events = (d.feedbackCount || 0) + (d.concessionCount || 0) + (d.rtsEventCount || 0);
+  const safetyBad = d.safety ? (d.safety.total || 0) - (d.safety.stars || 0) - (d.safety.thirdParty || 0) : 0;
+  const events = (d.feedbackCount || 0) + (d.concessionCount || 0) + (d.rtsEventCount || 0) + safetyBad;
   const amazonGap =
     d.amazonOverall !== null && d.amazonOverall !== undefined && d.overall !== null
       ? Math.round((d.overall - d.amazonOverall) * 10) / 10
@@ -87,8 +88,10 @@ function DriverCard({ d, rank }) {
 
       <div className="chips">
         {d.feedbackCount > 0 && <span className="chip bad">{d.feedbackCount} complaint{d.feedbackCount > 1 ? "s" : ""}</span>}
+        {safetyBad > 0 && <span className="chip bad">{safetyBad} driving event{safetyBad > 1 ? "s" : ""}</span>}
         {d.controllableRtsCount > 0 && <span className="chip warn">{d.controllableRtsCount} controllable RTS</span>}
         {d.concessionCount > 0 && <span className="chip warn">{d.concessionCount} concession{d.concessionCount > 1 ? "s" : ""}</span>}
+        {d.safety && d.safety.stars > 0 && <span className="chip ok">★ {d.safety.stars} DriverStar{d.safety.stars > 1 ? "s" : ""}</span>}
         {events === 0 && <span className="chip ok">clean ✓</span>}
       </div>
     </Link>
@@ -111,7 +114,7 @@ export default function DriversView({ byScope }) {
       <h1 className="page-title">Driver by Driver</h1>
       <p className="page-sub">
         {sorted.length} drivers · {scopeName} · ranked by Breez composite score (volume, returns,
-        complaints & concessions) · tap a card for the full deep-dive
+        complaints, concessions & driving safety) · tap a card for the full deep-dive
       </p>
 
       <div className="kicker" style={{ color: "var(--green)" }}>✅ Performing well ({performing.length})</div>
