@@ -1,0 +1,27 @@
+{
+  "pulledAt": "2026-07-06",
+  "window": "Last 30 Days (2026-06-07 to 2026-07-06)",
+  "source": "Netradyne IDMS console — All Alerts feed (latest 50 events)",
+  "note": "Counts are per-driver safety events. thirdParty events are caused by another vehicle and are treated as exempt. star = positive DriverStar recognition.",
+  "drivers": [
+    { "name": "Tequon Tigner", "total": 1, "thirdParty": 0, "hardBraking": 0, "backing": 1, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 0 },
+    { "name": "Rishard Zellars", "total": 4, "thirdParty": 1, "hardBraking": 0, "backing": 1, "following": 2, "distraction": 1, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 0 },
+    { "name": "Denita Bennett", "total": 1, "thirdParty": 0, "hardBraking": 0, "backing": 1, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 0 },
+    { "name": "Fredarian Jones", "total": 2, "thirdParty": 0, "hardBraking": 0, "backing": 1, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 1 },
+    { "name": "Andre Knuckles", "total": 5, "thirdParty": 0, "hardBraking": 2, "backing": 3, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 0 },
+    { "name": "Khalil Wilson", "total": 1, "thirdParty": 0, "hardBraking": 0, "backing": 0, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 1, "highG": 0, "accel": 0, "star": 0 },
+    { "name": "Malik Wingfield", "total": 1, "thirdParty": 0, "hardBraking": 0, "backing": 0, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 1 },
+    { "name": "Taylor Harris", "total": 5, "thirdParty": 0, "hardBraking": 1, "backing": 2, "following": 0, "distraction": 0, "drowsiness": 1, "seatbelt": 0, "highG": 0, "accel": 0, "star": 1 },
+    { "name": "Precious Uboh", "total": 2, "thirdParty": 0, "hardBraking": 1, "backing": 0, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 1 },
+    { "name": "Kaece Supples", "total": 2, "thirdParty": 0, "hardBraking": 1, "backing": 1, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 0 },
+    { "name": "Marquel Carter", "total": 3, "thirdParty": 0, "hardBraking": 0, "backing": 2, "following": 0, "distraction": 1, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 0 },
+    { "name": "Jalin Doty", "total": 2, "thirdParty": 0, "hardBraking": 0, "backing": 0, "following": 0, "distraction": 0, "drowsiness": 1, "seatbelt": 0, "highG": 0, "accel": 0, "star": 1 },
+    { "name": "JeanBaptiste Charles", "total": 1, "thirdParty": 0, "hardBraking": 1, "backing": 0, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 0 },
+    { "name": "Jaylin Ruffin", "total": 1, "thirdParty": 0, "hardBraking": 0, "backing": 0, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 1 },
+    { "name": "Mcray Williamson", "total": 1, "thirdParty": 0, "hardBraking": 0, "backing": 0, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 1 },
+    { "name": "Zechariah King", "total": 8, "thirdParty": 0, "hardBraking": 2, "backing": 5, "following": 0, "distraction": 0, "drowsiness": 1, "seatbelt": 0, "highG": 0, "accel": 0, "star": 0 },
+    { "name": "Desmond Ballard", "total": 3, "thirdParty": 0, "hardBraking": 1, "backing": 1, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 1 },
+    { "name": "Stuart Bonilla Piedras", "total": 3, "thirdParty": 0, "hardBraking": 0, "backing": 0, "following": 2, "distraction": 0, "drowsiness": 0, "seatbelt": 0, "highG": 0, "accel": 0, "star": 1 },
+    { "name": "Amir Bradford", "total": 3, "thirdParty": 0, "hardBraking": 1, "backing": 0, "following": 0, "distraction": 0, "drowsiness": 0, "seatbelt": 1, "highG": 0, "accel": 1, "star": 0 }
+  ]
+}
