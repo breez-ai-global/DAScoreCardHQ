@@ -236,6 +236,8 @@ table.data tr:hover td { background: rgba(255, 255, 255, 0.025); }
 .pill.bronze { background: rgba(255, 138, 138, 0.14); color: var(--red); }
 .pill.risk { background: rgba(255, 138, 138, 0.14); color: var(--red); }
 .pill.neutral { background: var(--card-2); color: var(--txt-2); }
+.pill.good { background: rgba(113, 221, 140, 0.16); color: var(--green); }
+.pill.mint { background: rgba(107, 230, 211, 0.16); color: var(--mint); }
 
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
 
@@ -482,6 +484,11 @@ table.data tr:hover td { background: rgba(255, 255, 255, 0.025); }
 .severity.warning { background: rgba(255, 208, 138, 0.14); color: var(--amber); }
 .severity.final { background: rgba(255, 138, 138, 0.16); color: var(--red); }
 .severity.coaching { background: rgba(173, 173, 251, 0.14); color: var(--primary); }
+.severity.excellent { background: rgba(113, 221, 140, 0.16); color: var(--green); }
+.severity.positive { background: rgba(107, 230, 211, 0.16); color: var(--mint); }
+.severity.warning1 { background: rgba(255, 208, 138, 0.14); color: var(--amber); }
+.severity.warning2 { background: rgba(255, 170, 90, 0.18); color: var(--amber); }
+.severity.pretermination { background: rgba(255, 138, 138, 0.12); color: var(--red); }
 .report h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--txt-2); margin: 22px 0 8px; }
 .report p { line-height: 1.55; margin: 6px 0; }
 .sig-row { display: flex; gap: 30px; margin-top: 40px; }
