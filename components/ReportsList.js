@@ -4,9 +4,15 @@ import { useEffect, useState } from "react";
 import Avatar from "./Avatar";
 
 const SEV = {
+  excellent: ["Excellent", "good"],
+  positive: ["Positive", "mint"],
   coaching: ["Coaching", "neutral"],
-  warning: ["Formal Warning", "gold"],
+  warning1: ["Formal Warning 1", "gold"],
+  warning2: ["Formal Warning 2", "gold"],
+  pretermination: ["Pre-Termination", "bronze"],
   final: ["Final Warning", "risk"],
+  // legacy value from earlier reports
+  warning: ["Formal Warning", "gold"],
 };
 
 export default function ReportsList() {

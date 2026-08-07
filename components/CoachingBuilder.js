@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { makeManagerSummary } from "../lib/reportTone";
+import { makeManagerSummary, defaultsFor, REPORT_TYPES } from "../lib/reportTone";
 
 function b64url(obj) {
   const json = JSON.stringify(obj);
@@ -10,11 +10,7 @@ function b64url(obj) {
   return b.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-const SEVERITIES = [
-  { value: "coaching", label: "Coaching Conversation" },
-  { value: "warning", label: "Formal Warning (pre-termination)" },
-  { value: "final", label: "Final Warning + Success Plan" },
-];
+const START = defaultsFor("coaching");
 
 export default function CoachingBuilder({ drivers }) {
   const params = useSearchParams();
@@ -24,12 +20,8 @@ export default function CoachingBuilder({ drivers }) {
   const [severity, setSeverity] = useState("coaching");
   const [managerName, setManagerName] = useState("");
   const [summary, setSummary] = useState("");
-  const [expectations, setExpectations] = useState(
-    "Follow delivery instructions on every stop.\nTake clear POD photos at the correct drop location.\nContact dispatch before marking any package RTS."
-  );
-  const [plan, setPlan] = useState(
-    "Week 1: Ride-along review of delivery photos with dispatch.\nWeek 2: Daily check-in on CDF and RTS before route end.\nWeek 3-4: Maintain zero negative feedback and POD ≥ 98%."
-  );
+  const [expectations, setExpectations] = useState(START.expectations);
+  const [plan, setPlan] = useState(START.plan);
   const [reviewDate, setReviewDate] = useState("");
   const [link, setLink] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,7 +29,7 @@ export default function CoachingBuilder({ drivers }) {
 
   const driver = useMemo(() => drivers.find((d) => d.id === driverId), [drivers, driverId]);
 
-  function regenerate(id = driverId, sev = severity) {
+  function regenSummary(id = driverId, sev = severity) {
     const d = drivers.find((x) => x.id === id);
     if (d) setSummary(makeManagerSummary(sev, d));
   }
@@ -45,16 +37,19 @@ export default function CoachingBuilder({ drivers }) {
   function selectDriver(id) {
     setDriverId(id);
     setLink("");
-    regenerate(id, severity);
+    regenSummary(id, severity);
   }
 
   function selectSeverity(sev) {
     setSeverity(sev);
-    regenerate(driverId, sev);
+    regenSummary(driverId, sev);
+    const def = defaultsFor(sev);
+    setExpectations(def.expectations);
+    setPlan(def.plan);
   }
 
   useEffect(() => {
-    if (preselect) regenerate(preselect, "coaching");
+    if (preselect) regenSummary(preselect, "coaching");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -71,7 +66,7 @@ export default function CoachingBuilder({ drivers }) {
       severity,
       summary,
       expectations,
-      plan: severity === "coaching" ? "" : plan,
+      plan,
       metrics: driver.metrics,
       reviewDate,
       manager: { name: managerName.trim(), signedAt: new Date().toISOString() },
@@ -116,7 +111,7 @@ export default function CoachingBuilder({ drivers }) {
 
         <label>Report Type</label>
         <select value={severity} onChange={(e) => selectSeverity(e.target.value)}>
-          {SEVERITIES.map((s) => (
+          {REPORT_TYPES.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
@@ -127,12 +122,8 @@ export default function CoachingBuilder({ drivers }) {
         <label>Expectations</label>
         <textarea value={expectations} onChange={(e) => setExpectations(e.target.value)} />
 
-        {severity !== "coaching" && (
-          <>
-            <label>Success Plan</label>
-            <textarea value={plan} onChange={(e) => setPlan(e.target.value)} />
-          </>
-        )}
+        <label>Success Plan</label>
+        <textarea value={plan} onChange={(e) => setPlan(e.target.value)} />
 
         <label>Review Date</label>
         <input type="date" value={reviewDate} onChange={(e) => setReviewDate(e.target.value)} />

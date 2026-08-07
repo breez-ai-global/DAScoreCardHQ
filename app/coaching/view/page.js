@@ -18,10 +18,18 @@ function decode(d) {
 }
 
 const SEVERITY_LABEL = {
+  excellent: ["Excellent Work", "excellent"],
+  positive: ["Positive Reinforcement", "positive"],
   coaching: ["Coaching Conversation", "coaching"],
-  warning: ["Formal Warning", "warning"],
+  warning1: ["Formal Warning 1", "warning1"],
+  warning2: ["Formal Warning 2", "warning2"],
+  pretermination: ["Formal Warning — Pre-Termination", "pretermination"],
   final: ["Final Warning — Success Plan", "final"],
+  // legacy value from earlier reports
+  warning: ["Formal Warning", "warning1"],
 };
+
+const WARNING_TIERS = ["warning", "warning1", "warning2", "pretermination", "final"];
 
 function fmtDate(iso) {
   return (iso || "").slice(0, 10);
@@ -131,7 +139,7 @@ function Report() {
           </>
         )}
 
-        {payload.severity !== "coaching" && (
+        {WARNING_TIERS.includes(payload.severity) && (
           <>
             <h3>Acknowledgement</h3>
             <p style={{ fontSize: 13.5 }}>
