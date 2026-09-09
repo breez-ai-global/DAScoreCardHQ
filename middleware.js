@@ -1,19 +1,52 @@
 import { NextResponse } from "next/server";
-import { SITE_PASSWORD } from "./lib/password";
 
-async function expectedToken() {
-  const secret = SITE_PASSWORD;
-  const data = new TextEncoder().encode("breez-scorecard::" + secret);
+// Simple shared-password gate. The auth cookie holds an HMAC-ish token derived
+// from SITE_PASSWORD so changing the password invalidates existing sessions.
+import { SITE_PASSWORD } from "./lib/password";
+import { PLANNER_PASSWORD } from "./lib/plannerPassword";
+
+async function tokenFor(prefix, secret) {
+  const data = new TextEncoder().encode(prefix + secret);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
+function expectedToken() {
+  return tokenFor("breez-scorecard::", SITE_PASSWORD);
+}
+
+function expectedPlannerToken() {
+  return tokenFor("breez-planner::", PLANNER_PASSWORD);
+}
+
 export async function middleware(request) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // Public paths
+  // ── Standalone planner: its own gate, independent of the main password ──
+  if (
+    pathname.startsWith("/scorecard-planner") ||
+    pathname.startsWith("/api/planner-auth")
+  ) {
+    // Login page and the auth endpoint are always reachable.
+    if (
+      pathname.startsWith("/scorecard-planner/login") ||
+      pathname.startsWith("/api/planner-auth")
+    ) {
+      return NextResponse.next();
+    }
+    const pc = request.cookies.get("bgl_planner");
+    if (pc && pc.value === (await expectedPlannerToken())) {
+      return NextResponse.next();
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = "/scorecard-planner/login";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  // Public paths (main site)
   if (
     pathname.startsWith("/login") ||
     pathname.startsWith("/api/auth") ||

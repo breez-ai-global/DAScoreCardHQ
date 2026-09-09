@@ -14,6 +14,7 @@ export default function NavLinks({ disputeCount = 0 }) {
     { href: "/rts", label: "Return to Station", icon: "⇄" },
     { href: "/coaching", label: "Coaching Reports", icon: "✎" },
     { href: "/codes", label: "What the Codes Mean", icon: "📖" },
+    { href: "/anatomy", label: "Scorecard Anatomy", icon: "🧮" },
   ];
   return (
     <>
