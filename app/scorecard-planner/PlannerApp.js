@@ -5,15 +5,18 @@ import Logo from "../../components/Logo";
 import {
   METRICS,
   THRESHOLDS,
-  SUPPLEMENTAL_SLOTS,
+  WEIGHT_SUM,
   rawToSubScore,
   subScoreTier,
   computeOverall,
+  overallFromSubScores,
+  leverSensitivity,
   rankLevers,
   calibrationOffset,
   projectOverall,
   parseScorecardText,
   overallTier,
+  SUPPLEMENTAL_SLOTS,
 } from "../../lib/amazonModel";
 
 const PDFJS_SRC =
@@ -81,6 +84,12 @@ export default function PlannerApp() {
   const [whatIf, setWhatIf] = useState({}); // key -> raw override
   const [supp, setSupp] = useState({}); // slotKey -> {fileName, headers, rows}
   const [target, setTarget] = useState(90);
+  const [showLogic, setShowLogic] = useState(true);
+  // Standalone interactive weight calculator — starts every metric at a
+  // "Fantastic" sub-score (80) so people can play before uploading anything.
+  const [calc, setCalc] = useState(() =>
+    Object.fromEntries(METRICS.map((m) => [m.key, 80]))
+  );
 
   // Load pdf.js UMD build
   useEffect(() => {
@@ -155,6 +164,14 @@ export default function PlannerApp() {
     [values, whatIf, offset]
   );
 
+  // Interactive calculator model (independent of any uploaded scorecard).
+  const calcModel = useMemo(() => overallFromSubScores(calc), [calc]);
+  const calcTier = overallTier(calcModel.gatedOverall);
+  const weightsByWeight = useMemo(
+    () => [...METRICS].sort((a, b) => b.weight - a.weight),
+    []
+  );
+
   const hasData = model.parts.length > 0;
   const baselineDisplay =
     printedOverall !== null
@@ -177,6 +194,142 @@ export default function PlannerApp() {
         </div>
         <span className="pl-priv">Processed in your browser · nothing is uploaded or stored</span>
       </header>
+
+      {/* HOW IT WORKS — scoring logic explainer */}
+      <section className="pl-card">
+        <div className="pl-explain-head">
+          <div className="pl-step" style={{ marginBottom: 0 }}>How the Overall is calculated</div>
+          <button className="pl-toggle" onClick={() => setShowLogic((s) => !s)}>
+            {showLogic ? "Hide" : "Show"}
+          </button>
+        </div>
+        {showLogic && (
+          <div className="pl-explain">
+            <p className="pl-explain-lead">
+              Your weekly scorecard isn&apos;t a simple average of tier labels. Amazon computes it in
+              two layers, then applies two gates. Here&apos;s the whole thing.
+            </p>
+
+            <div className="pl-layers">
+              <div className="pl-layer">
+                <div className="pl-layer-num">Layer 1</div>
+                <div className="pl-layer-title">Each raw number becomes a 0–100 sub-score</div>
+                <p>
+                  Every metric&apos;s raw value (DPMO, event rate, POD %) is mapped onto a 0–100
+                  sub-score along a <b>continuous sloped line</b> anchored at the tier edges —
+                  Fantastic ≈ 90, Great ≈ 70, Fair ≈ 50. It is <b>not</b> a flat step per tier, so
+                  shaving a DPMO even without changing tier still earns points.
+                </p>
+              </div>
+              <div className="pl-layer">
+                <div className="pl-layer-num">Layer 2</div>
+                <div className="pl-layer-title">Sub-scores are blended by weight</div>
+                <p>
+                  The sub-scores are combined into one number using a <b>weighted average</b> — the
+                  weights below. That number maps to your Overall Standing band: Poor / Fair / Great /
+                  Fantastic / Fantastic&nbsp;Plus.
+                </p>
+              </div>
+              <div className="pl-layer">
+                <div className="pl-layer-num">Gates</div>
+                <div className="pl-layer-title">Two ceilings that can pull you down</div>
+                <p>
+                  <b>Safety ceiling:</b> your Overall can never exceed your Safety &amp; Compliance
+                  score — weak safety caps everything. <b>Capped for Quality:</b> a Fantastic Overall
+                  requires Fantastic Delivery Quality.
+                </p>
+              </div>
+            </div>
+
+            <div className="pl-weighttable">
+              <div className="pl-wt-title">Effective metric weights (what actually moves the needle)</div>
+              <div className="pl-wt-grid">
+                {weightsByWeight.map((m) => (
+                  <div className="pl-wt-row" key={m.key}>
+                    <div className="pl-wt-bar">
+                      <div
+                        className="pl-wt-barfill"
+                        style={{ width: `${(m.weight / weightsByWeight[0].weight) * 100}%` }}
+                      />
+                    </div>
+                    <div className="pl-wt-lab">{m.label}</div>
+                    <div className="pl-wt-grp">{m.group}</div>
+                    <div className="pl-wt-pct">{fmt(m.weight)}%</div>
+                  </div>
+                ))}
+              </div>
+              <div className="pl-legend" style={{ marginTop: 10 }}>
+                Weights are effective values after Amazon redistributes inactive metrics (FICO,
+                Tenured Workforce) and the &quot;Coming Soon&quot; Pickup group across the active
+                metrics. They sum to ~100%. Tier thresholds are best-known estimates.
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* INTERACTIVE WEIGHT CALCULATOR — works with no upload */}
+      <section className="pl-card">
+        <div className="pl-step">Try it · Interactive weight calculator</div>
+        <div className="pl-calc-intro">
+          No scorecard needed. Drag each metric from Poor to Fantastic&nbsp;Plus and watch the Overall
+          move. Because bigger-weight metrics push harder, this shows exactly which levers matter most
+          <b> before</b> you touch a single number.
+        </div>
+        <div className="pl-calc">
+          <div className="pl-calc-controls">
+            {weightsByWeight.map((m) => {
+              const sub = calc[m.key];
+              const t = subScoreTier(sub);
+              const sens = leverSensitivity(m.key, calcModel.weightCovered || WEIGHT_SUM);
+              return (
+                <div className="pl-calc-row" key={m.key}>
+                  <div className="pl-calc-lab">
+                    <span className="pl-calc-name">{m.label}</span>
+                    <span className="pl-calc-wt">{fmt(m.weight)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={sub}
+                    onChange={(e) =>
+                      setCalc((c) => ({ ...c, [m.key]: Number(e.target.value) }))
+                    }
+                  />
+                  <div className="pl-calc-meta">
+                    <span className={`pl-calc-tier ${TIER_CLS[t.label] || "tier-nodata"}`}>
+                      {t.label} · {fmt(sub)}
+                    </span>
+                    <span className="pl-calc-sens">+10 pts here = +{fmt(sens * 10)} overall</span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="pl-calc-presets">
+              <span>Set all to:</span>
+              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 45])))}>Fair</button>
+              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 70])))}>Great</button>
+              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 90])))}>Fantastic</button>
+              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 100])))}>Max</button>
+            </div>
+          </div>
+          <div className="pl-calc-out">
+            <div className="pl-wi-outlab">Modeled Overall</div>
+            <div className="pl-wi-outnum">{calcModel.gatedOverall === null ? "—" : fmt(calcModel.gatedOverall)}</div>
+            <div className={`pl-wi-outtier ${TIER_CLS[calcTier.label] || "tier-nodata"}`}>
+              {calcTier.label || "—"}
+            </div>
+            {calcModel.safetyGated && (
+              <div className="pl-calc-gate">⚠ Safety ceiling is capping this Overall.</div>
+            )}
+            <div className="pl-calc-out-note">
+              Ungated average: {fmt(calcModel.overall)}. The Overall is the safety-gated figure.
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* STEP 1 — upload / enter */}
       <section className="pl-card">
