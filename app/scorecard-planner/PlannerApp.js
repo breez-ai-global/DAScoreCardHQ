@@ -73,6 +73,21 @@ const TIER_CLS = {
   Poor: "tier-poor",
 };
 
+// Default state for the interactive weight calculator: every metric starts at
+// a "Fantastic" sub-score (80) so people can play before uploading anything.
+const defaultCalc = () => Object.fromEntries(METRICS.map((m) => [m.key, 80]));
+
+// Sync the interactive calculator's sub-scores to a set of raw sheet values.
+// Only metrics with a real parsed value are overwritten; the rest keep prev.
+function calcFromValues(vals, prev) {
+  const next = { ...prev };
+  for (const m of METRICS) {
+    const sub = rawToSubScore(m.key, vals?.[m.key]);
+    if (sub !== null) next[m.key] = Math.round(sub);
+  }
+  return next;
+}
+
 export default function PlannerApp() {
   const [pdfReady, setPdfReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -87,9 +102,10 @@ export default function PlannerApp() {
   const [showLogic, setShowLogic] = useState(true);
   // Standalone interactive weight calculator — starts every metric at a
   // "Fantastic" sub-score (80) so people can play before uploading anything.
-  const [calc, setCalc] = useState(() =>
-    Object.fromEntries(METRICS.map((m) => [m.key, 80]))
-  );
+  const [calc, setCalc] = useState(defaultCalc);
+  // Bumped on Clear so uncontrolled file inputs remount and the same file can
+  // be re-selected.
+  const [resetKey, setResetKey] = useState(0);
 
   // Load pdf.js UMD build
   useEffect(() => {
@@ -105,29 +121,57 @@ export default function PlannerApp() {
     document.body.appendChild(sc);
   }, []);
 
-  async function handlePdf(file) {
+  // Extract a text blob from a PDF, reconstructing lines by y-position so a
+  // label and its value stay on the same line.
+  async function pdfToText(file) {
+    if (!window.pdfjsLib) throw new Error("PDF reader still loading — try again in a moment");
+    const buf = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    let text = "";
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      const byLine = {};
+      for (const it of content.items) {
+        const y = Math.round(it.transform[5]);
+        (byLine[y] = byLine[y] || []).push(it.str);
+      }
+      const ys = Object.keys(byLine).map(Number).sort((a, b) => b - a);
+      for (const y of ys) text += byLine[y].join(" ") + "\n";
+      text += "\n";
+    }
+    return text;
+  }
+
+  // Turn a CSV into a label+value text blob the scorecard parser understands.
+  // Handles both orientations: "wide" (header row of labels + a data row of
+  // values) and "long" (each row is label,value[,tier]).
+  function csvToText(raw) {
+    const { headers, rows } = parseCSV(raw);
+    const lines = [];
+    if (headers.length && rows.length) {
+      const first = rows[0];
+      for (const h of headers) {
+        const v = first[h];
+        if (v !== undefined && v !== "") lines.push(`${h} ${v}`);
+      }
+    }
+    for (const r of rows) lines.push(headers.map((h) => r[h] ?? "").join(" "));
+    // Include the raw text too as a final fallback for odd layouts.
+    return lines.join("\n") + "\n" + raw;
+  }
+
+  async function handleFile(file) {
     if (!file) return;
     setBusy(true);
     setFileName(file.name);
     try {
-      const buf = await file.arrayBuffer();
-      const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
-      let text = "";
-      for (let p = 1; p <= pdf.numPages; p++) {
-        const page = await pdf.getPage(p);
-        const content = await page.getTextContent();
-        // Reconstruct lines by y-position so label + value stay together.
-        const byLine = {};
-        for (const it of content.items) {
-          const y = Math.round(it.transform[5]);
-          (byLine[y] = byLine[y] || []).push(it.str);
-        }
-        const ys = Object.keys(byLine).map(Number).sort((a, b) => b - a);
-        for (const y of ys) text += byLine[y].join(" ") + "\n";
-        text += "\n";
-      }
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      const text = isPdf ? await pdfToText(file) : csvToText(await file.text());
       const parsed = parseScorecardText(text);
-      setValues((v) => ({ ...v, ...parsed.values }));
+      const newValues = parsed.values || {};
+      setValues(newValues);                        // replace, not merge
+      setCalc((c) => calcFromValues(newValues, c)); // sync calculator to sheet
       setPrintedOverall(parsed.overall);
       setPrintedTier(parsed.overallTier);
       setParseInfo(parsed);
@@ -147,8 +191,27 @@ export default function PlannerApp() {
   }
 
   function setVal(key, raw) {
-    setValues((v) => ({ ...v, [key]: raw === "" ? undefined : Number(raw) }));
+    const num = raw === "" ? undefined : Number(raw);
+    setValues((v) => ({ ...v, [key]: num }));
+    setCalc((c) => {
+      const sub = rawToSubScore(key, num);
+      return sub === null ? c : { ...c, [key]: Math.round(sub) };
+    });
     setWhatIf((w) => { const n = { ...w }; delete n[key]; return n; });
+  }
+
+  // Reset the whole tool back to its initial state.
+  function handleClear() {
+    setValues({});
+    setWhatIf({});
+    setCalc(defaultCalc());
+    setSupp({});
+    setPrintedOverall(null);
+    setPrintedTier(null);
+    setParseInfo(null);
+    setFileName("");
+    setTarget(90);
+    setResetKey((k) => k + 1);
   }
 
   // ── computed model ──
@@ -192,7 +255,12 @@ export default function PlannerApp() {
             </div>
           </div>
         </div>
-        <span className="pl-priv">Processed in your browser · nothing is uploaded or stored</span>
+        <div className="pl-head-right">
+          <span className="pl-priv">Processed in your browser · nothing is uploaded or stored</span>
+          <button className="pl-clear" type="button" onClick={handleClear}>
+            Clear all
+          </button>
+        </div>
       </header>
 
       {/* HOW IT WORKS — scoring logic explainer */}
@@ -337,21 +405,22 @@ export default function PlannerApp() {
         <div className="pl-upgrid">
           <label className={`pl-drop${busy ? " busy" : ""}`}>
             <input
+              key={`pdf-${resetKey}`}
               type="file"
-              accept="application/pdf"
-              disabled={!pdfReady || busy}
-              onChange={(e) => handlePdf(e.target.files?.[0])}
+              accept="application/pdf,.pdf,.csv,.tsv,text/csv"
+              disabled={busy}
+              onChange={(e) => handleFile(e.target.files?.[0])}
             />
             <span className="pl-drop-big">
-              {busy ? "Reading…" : "Drop / choose a scorecard PDF"}
+              {busy ? "Reading…" : "Drop / choose a scorecard PDF or CSV"}
             </span>
             <span className="pl-drop-small">
-              {pdfReady ? "Auto-reads the printed numbers" : "Loading PDF reader…"}
+              {pdfReady ? "Auto-reads the printed numbers (PDF or CSV)" : "Loading PDF reader… (CSV works now)"}
             </span>
             {fileName && <span className="pl-file">{fileName}</span>}
           </label>
           <div className="pl-note">
-            No PDF? Type the raw numbers into the table below — everything still works.
+            No file? Type the raw numbers into the table below — everything still works.
             {parseInfo && !parseInfo.error && (
               <div className="pl-parseinfo">
                 Read {parseInfo.matched.length} field{parseInfo.matched.length === 1 ? "" : "s"}
@@ -560,6 +629,7 @@ export default function PlannerApp() {
                 <div className="pl-supphint">{slot.hint}</div>
                 <label className="pl-suppbtn">
                   <input
+                    key={`${slot.key}-${resetKey}`}
                     type="file"
                     accept=".csv,.tsv,text/csv"
                     onChange={(e) => handleSupp(slot.key, e.target.files?.[0])}
