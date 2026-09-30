@@ -768,7 +768,7 @@ table.data tr:hover td { background: rgba(255, 255, 255, 0.025); }
   .score-build .sb-op { display: none; }
 }
 
-/* ── Scorecard Planner (standalone /scorecard-planner) ───────────────────────── */
+/* ── Scorecard Planner (standalone /scorecard-planner) ───────────────────── */
 .pl-wrap { max-width: 1040px; margin: 0 auto; padding: 24px 18px 60px; }
 .pl-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -777,10 +777,18 @@ table.data tr:hover td { background: rgba(255, 255, 255, 0.025); }
 .pl-brand { display: flex; align-items: center; gap: 14px; }
 .pl-title { font-size: 20px; font-weight: 600; }
 .pl-sub { font-size: 13px; color: var(--txt-2); margin-top: 2px; max-width: 460px; }
+.pl-head-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pl-priv {
   font-size: 11.5px; color: var(--txt-2); background: var(--breeze-soft);
   border: 1px solid var(--line); padding: 6px 10px; border-radius: 999px;
 }
+.pl-clear {
+  font-size: 12px; font-weight: 600; color: var(--txt-2);
+  background: var(--card-2); border: 1px solid var(--line-strong);
+  padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.pl-clear:hover { border-color: var(--red); color: var(--red); }
 .pl-card {
   background: var(--card); border: 1px solid var(--line);
   border-radius: var(--r); padding: 18px 18px 20px; margin-bottom: 16px;
@@ -893,7 +901,7 @@ table.data tr:hover td { background: rgba(255, 255, 255, 0.025); }
 .pl-foot { font-size: 11.5px; color: var(--txt-3); text-align: center; margin-top: 8px; line-height: 1.6; }
 .tier-fantasticplus { color: var(--mint); }
 
-/* ── Scoring-logic explainer ──────────────────────────────────────────── */
+/* ── Scoring-logic explainer ─────────────────────────────────────────────── */
 .pl-explain-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .pl-toggle {
   background: var(--card-2); border: 1px solid var(--line); color: var(--txt-2);
@@ -919,7 +927,7 @@ table.data tr:hover td { background: rgba(255, 255, 255, 0.025); }
 .pl-wt-grp { font-size: 11.5px; color: var(--txt-3); }
 .pl-wt-pct { font-size: 12.5px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
 
-/* ── Interactive weight calculator ──────────────────────────────────── */
+/* ── Interactive weight calculator ───────────────────────────────────────── */
 .pl-calc-intro { font-size: 13px; color: var(--txt-2); line-height: 1.6; margin-bottom: 16px; max-width: 760px; }
 .pl-calc { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-items: start; }
 .pl-calc-controls { display: flex; flex-direction: column; gap: 12px; }
