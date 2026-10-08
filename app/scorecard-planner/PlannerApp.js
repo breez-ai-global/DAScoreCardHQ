@@ -486,7 +486,13 @@ export default function PlannerApp() {
               {METRICS.map((m) => {
                 const raw = values[m.key];
                 const sub = rawToSubScore(m.key, raw);
-                const t = subScoreTier(sub);
+                // Prefer the tier Amazon printed for this exact value; the
+                // modeled tier is only a fallback (thresholds are estimates).
+                const printed =
+                  parseInfo?.tiers?.[m.key] && parseInfo.values?.[m.key] === raw
+                    ? parseInfo.tiers[m.key]
+                    : null;
+                const t = printed ? { label: printed } : subScoreTier(sub);
                 const contrib =
                   sub !== null && model.weightCovered
                     ? (sub * m.weight) / model.weightCovered
