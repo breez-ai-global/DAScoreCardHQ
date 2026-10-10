@@ -15,6 +15,8 @@ import {
   calibrationOffset,
   projectOverall,
   parseScorecardText,
+  ANCHOR,
+  TIER_SUB,
   overallTier,
   SUPPLEMENTAL_SLOTS,
 } from "../../lib/amazonModel";
@@ -74,8 +76,9 @@ const TIER_CLS = {
 };
 
 // Default state for the interactive weight calculator: every metric starts at
-// a "Fantastic" sub-score (80) so people can play before uploading anything.
-const defaultCalc = () => Object.fromEntries(METRICS.map((m) => [m.key, 80]));
+// a mid-Fantastic sub-score so people can play before uploading anything.
+const fillCalc = (v) => Object.fromEntries(METRICS.map((m) => [m.key, v]));
+const defaultCalc = () => fillCalc(TIER_SUB.fantastic);
 
 // Sync the interactive calculator's sub-scores to a set of raw sheet values.
 // Only metrics with a real parsed value are overwritten; the rest keep prev.
@@ -83,7 +86,7 @@ function calcFromValues(vals, prev) {
   const next = { ...prev };
   for (const m of METRICS) {
     const sub = rawToSubScore(m.key, vals?.[m.key]);
-    if (sub !== null) next[m.key] = Math.round(sub);
+    if (sub !== null) next[m.key] = Math.round(sub * 10) / 10;
   }
   return next;
 }
@@ -98,7 +101,7 @@ export default function PlannerApp() {
   const [parseInfo, setParseInfo] = useState(null);
   const [whatIf, setWhatIf] = useState({}); // key -> raw override
   const [supp, setSupp] = useState({}); // slotKey -> {fileName, headers, rows}
-  const [target, setTarget] = useState(90);
+  const [target, setTarget] = useState(100);
   const [showLogic, setShowLogic] = useState(true);
   // Standalone interactive weight calculator — starts every metric at a
   // "Fantastic" sub-score (80) so people can play before uploading anything.
@@ -195,7 +198,7 @@ export default function PlannerApp() {
     setValues((v) => ({ ...v, [key]: num }));
     setCalc((c) => {
       const sub = rawToSubScore(key, num);
-      return sub === null ? c : { ...c, [key]: Math.round(sub) };
+      return sub === null ? c : { ...c, [key]: Math.round(sub * 10) / 10 };
     });
     setWhatIf((w) => { const n = { ...w }; delete n[key]; return n; });
   }
@@ -210,7 +213,7 @@ export default function PlannerApp() {
     setPrintedTier(null);
     setParseInfo(null);
     setFileName("");
-    setTarget(90);
+    setTarget(100);
     setResetKey((k) => k + 1);
   }
 
@@ -229,7 +232,13 @@ export default function PlannerApp() {
 
   // Interactive calculator model (independent of any uploaded scorecard).
   const calcModel = useMemo(() => overallFromSubScores(calc), [calc]);
-  const calcTier = overallTier(calcModel.gatedOverall);
+  // Once a scorecard is loaded, carry the same (small) calibration offset so
+  // the calculator starts exactly on the printed Overall and moves from there.
+  const calcOverall =
+    calcModel.gatedOverall === null
+      ? null
+      : Math.max(0, Math.min(100, calcModel.gatedOverall + (printedOverall !== null ? offset : 0)));
+  const calcTier = overallTier(calcOverall);
   const weightsByWeight = useMemo(
     () => [...METRICS].sort((a, b) => b.weight - a.weight),
     []
@@ -285,7 +294,7 @@ export default function PlannerApp() {
                 <p>
                   Every metric&apos;s raw value (DPMO, event rate, POD %) is mapped onto a 0–100
                   sub-score along a <b>continuous sloped line</b> anchored at the tier edges —
-                  Fantastic ≈ 90, Great ≈ 70, Fair ≈ 50. It is <b>not</b> a flat step per tier, so
+                  a perfect 0 scores 100, the Fantastic edge ≈ {ANCHOR.fantastic}, Great ≈ {ANCHOR.great}, Fair ≈ {ANCHOR.fair}. It is <b>not</b> a flat step per tier, so
                   shaving a DPMO even without changing tier still earns points.
                 </p>
               </div>
@@ -340,7 +349,7 @@ export default function PlannerApp() {
       <section className="pl-card">
         <div className="pl-step">Try it · Interactive weight calculator</div>
         <div className="pl-calc-intro">
-          No scorecard needed. Drag each metric from Poor to Fantastic&nbsp;Plus and watch the Overall
+          No scorecard needed. Drag each metric from Poor to perfect and watch the Overall
           move. Because bigger-weight metrics push harder, this shows exactly which levers matter most
           <b> before</b> you touch a single number.
         </div>
@@ -377,15 +386,15 @@ export default function PlannerApp() {
             })}
             <div className="pl-calc-presets">
               <span>Set all to:</span>
-              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 45])))}>Fair</button>
-              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 70])))}>Great</button>
-              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 90])))}>Fantastic</button>
-              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 100])))}>Max</button>
+              <button onClick={() => setCalc(fillCalc(TIER_SUB.fair))}>Fair</button>
+              <button onClick={() => setCalc(fillCalc(TIER_SUB.great))}>Great</button>
+              <button onClick={() => setCalc(fillCalc(TIER_SUB.fantastic))}>Fantastic</button>
+              <button onClick={() => setCalc(fillCalc(TIER_SUB.max))}>Max</button>
             </div>
           </div>
           <div className="pl-calc-out">
             <div className="pl-wi-outlab">Modeled Overall</div>
-            <div className="pl-wi-outnum">{calcModel.gatedOverall === null ? "—" : fmt(calcModel.gatedOverall)}</div>
+            <div className="pl-wi-outnum">{calcOverall === null ? "—" : fmt(calcOverall)}</div>
             <div className={`pl-wi-outtier ${TIER_CLS[calcTier.label] || "tier-nodata"}`}>
               {calcTier.label || "—"}
             </div>
@@ -538,9 +547,9 @@ export default function PlannerApp() {
           <div className="pl-leverhead">
             If each metric were lifted to a sub-score of
             <select value={target} onChange={(e) => setTarget(Number(e.target.value))}>
-              <option value={70}>70 (Great)</option>
-              <option value={90}>90 (Fantastic)</option>
-              <option value={100}>100 (max)</option>
+              <option value={ANCHOR.great}>{ANCHOR.great} (Great)</option>
+              <option value={ANCHOR.fantastic}>{ANCHOR.fantastic} (Fantastic)</option>
+              <option value={100}>100 (perfect)</option>
             </select>
             , here&apos;s how many Overall points each move is worth — highest first.
           </div>
