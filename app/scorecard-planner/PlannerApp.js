@@ -5,16 +5,13 @@ import Logo from "../../components/Logo";
 import {
   METRICS,
   THRESHOLDS,
-  WEIGHT_SUM,
   rawToSubScore,
   subScoreTier,
   computeOverall,
-  overallFromSubScores,
-  leverSensitivity,
   rankLevers,
   calibrationOffset,
-  projectOverall,
   parseScorecardText,
+  ANCHOR,
   overallTier,
   SUPPLEMENTAL_SLOTS,
 } from "../../lib/amazonModel";
@@ -73,19 +70,22 @@ const TIER_CLS = {
   Poor: "tier-poor",
 };
 
-// Default state for the interactive weight calculator: every metric starts at
-// a "Fantastic" sub-score (80) so people can play before uploading anything.
-const defaultCalc = () => Object.fromEntries(METRICS.map((m) => [m.key, 80]));
+// Raw values the what-if sliders start from before any scorecard is loaded:
+// a perfect week (0 events / 0 DPMO / 100% POD).
+const PERFECT_RAW = Object.fromEntries(
+  METRICS.map((m) => [m.key, THRESHOLDS[m.key].dir === "up" ? 100 : 0])
+);
 
-// Sync the interactive calculator's sub-scores to a set of raw sheet values.
-// Only metrics with a real parsed value are overwritten; the rest keep prev.
-function calcFromValues(vals, prev) {
-  const next = { ...prev };
-  for (const m of METRICS) {
-    const sub = rawToSubScore(m.key, vals?.[m.key]);
-    if (sub !== null) next[m.key] = Math.round(sub);
+// Slider range + step in the metric's own raw units (events/100 trips, DPMO,
+// %, score). Always wide enough to include the current value.
+function rawRange(key, cur) {
+  const th = THRESHOLDS[key];
+  if (th.dir === "up") {
+    const lo = Math.min(th.fair - (th.great - th.fair) * 2, cur ?? Infinity);
+    return { min: Math.floor(lo), max: 100, step: 0.01 };
   }
-  return next;
+  const hi = Math.max(th.fair + (th.fair - th.great) * 2, (cur ?? 0) * 1.25);
+  return { min: 0, max: hi, step: hi <= 50 ? 0.1 : 1 };
 }
 
 export default function PlannerApp() {
@@ -96,13 +96,10 @@ export default function PlannerApp() {
   const [printedOverall, setPrintedOverall] = useState(null);
   const [printedTier, setPrintedTier] = useState(null);
   const [parseInfo, setParseInfo] = useState(null);
-  const [whatIf, setWhatIf] = useState({}); // key -> raw override
+  const [whatIf, setWhatIf] = useState({}); // key -> raw slider override
   const [supp, setSupp] = useState({}); // slotKey -> {fileName, headers, rows}
-  const [target, setTarget] = useState(90);
+  const [target, setTarget] = useState(100);
   const [showLogic, setShowLogic] = useState(true);
-  // Standalone interactive weight calculator — starts every metric at a
-  // "Fantastic" sub-score (80) so people can play before uploading anything.
-  const [calc, setCalc] = useState(defaultCalc);
   // Bumped on Clear so uncontrolled file inputs remount and the same file can
   // be re-selected.
   const [resetKey, setResetKey] = useState(0);
@@ -171,7 +168,6 @@ export default function PlannerApp() {
       const parsed = parseScorecardText(text);
       const newValues = parsed.values || {};
       setValues(newValues);                        // replace, not merge
-      setCalc((c) => calcFromValues(newValues, c)); // sync calculator to sheet
       setPrintedOverall(parsed.overall);
       setPrintedTier(parsed.overallTier);
       setParseInfo(parsed);
@@ -193,10 +189,6 @@ export default function PlannerApp() {
   function setVal(key, raw) {
     const num = raw === "" ? undefined : Number(raw);
     setValues((v) => ({ ...v, [key]: num }));
-    setCalc((c) => {
-      const sub = rawToSubScore(key, num);
-      return sub === null ? c : { ...c, [key]: Math.round(sub) };
-    });
     setWhatIf((w) => { const n = { ...w }; delete n[key]; return n; });
   }
 
@@ -204,13 +196,12 @@ export default function PlannerApp() {
   function handleClear() {
     setValues({});
     setWhatIf({});
-    setCalc(defaultCalc());
     setSupp({});
     setPrintedOverall(null);
     setPrintedTier(null);
     setParseInfo(null);
     setFileName("");
-    setTarget(90);
+    setTarget(100);
     setResetKey((k) => k + 1);
   }
 
@@ -222,14 +213,30 @@ export default function PlannerApp() {
   );
   const levers = useMemo(() => rankLevers(values, target), [values, target]);
 
-  const whatIfResult = useMemo(
-    () => projectOverall(values, whatIf, offset),
-    [values, whatIf, offset]
+  // What-if: the sliders hold raw values in the same units as the table. They
+  // start on the loaded scorecard (or on a perfect week if nothing is
+  // loaded) and run through exactly the same computeOverall + calibration as
+  // the breakdown, so untouched sliders always equal the printed Overall.
+  const simBase = useMemo(
+    () => (Object.keys(values).length ? values : PERFECT_RAW),
+    [values]
   );
+  const simOffset = printedOverall !== null ? offset : 0;
+  const simCalibrated = (raw) => {
+    const g = computeOverall(raw).gatedOverall;
+    return g === null ? null : Math.max(0, Math.min(100, Math.round((g + simOffset) * 10) / 10));
+  };
+  const simRaw = useMemo(() => ({ ...simBase, ...whatIf }), [simBase, whatIf]);
+  const simNow = useMemo(() => simCalibrated(simBase), [simBase, simOffset]); // eslint-disable-line
+  const simProj = useMemo(() => simCalibrated(simRaw), [simRaw, simOffset]); // eslint-disable-line
+  const simTier = overallTier(simProj);
+  const simGated = useMemo(() => {
+    const r = computeOverall(simRaw);
+    return r.gatedOverall !== null && r.gatedOverall < r.overall;
+  }, [simRaw]);
+  const setAll = (target) =>
+    setWhatIf(Object.fromEntries(Object.keys(simBase).map((k) => [k, target[k]])));
 
-  // Interactive calculator model (independent of any uploaded scorecard).
-  const calcModel = useMemo(() => overallFromSubScores(calc), [calc]);
-  const calcTier = overallTier(calcModel.gatedOverall);
   const weightsByWeight = useMemo(
     () => [...METRICS].sort((a, b) => b.weight - a.weight),
     []
@@ -285,7 +292,7 @@ export default function PlannerApp() {
                 <p>
                   Every metric&apos;s raw value (DPMO, event rate, POD %) is mapped onto a 0–100
                   sub-score along a <b>continuous sloped line</b> anchored at the tier edges —
-                  Fantastic ≈ 90, Great ≈ 70, Fair ≈ 50. It is <b>not</b> a flat step per tier, so
+                  a perfect 0 scores 100, the Fantastic edge ≈ {ANCHOR.fantastic}, Great ≈ {ANCHOR.great}, Fair ≈ {ANCHOR.fair}. It is <b>not</b> a flat step per tier, so
                   shaving a DPMO even without changing tier still earns points.
                 </p>
               </div>
@@ -334,69 +341,6 @@ export default function PlannerApp() {
             </div>
           </div>
         )}
-      </section>
-
-      {/* INTERACTIVE WEIGHT CALCULATOR — works with no upload */}
-      <section className="pl-card">
-        <div className="pl-step">Try it · Interactive weight calculator</div>
-        <div className="pl-calc-intro">
-          No scorecard needed. Drag each metric from Poor to Fantastic&nbsp;Plus and watch the Overall
-          move. Because bigger-weight metrics push harder, this shows exactly which levers matter most
-          <b> before</b> you touch a single number.
-        </div>
-        <div className="pl-calc">
-          <div className="pl-calc-controls">
-            {weightsByWeight.map((m) => {
-              const sub = calc[m.key];
-              const t = subScoreTier(sub);
-              const sens = leverSensitivity(m.key, calcModel.weightCovered || WEIGHT_SUM);
-              return (
-                <div className="pl-calc-row" key={m.key}>
-                  <div className="pl-calc-lab">
-                    <span className="pl-calc-name">{m.label}</span>
-                    <span className="pl-calc-wt">{fmt(m.weight)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={sub}
-                    onChange={(e) =>
-                      setCalc((c) => ({ ...c, [m.key]: Number(e.target.value) }))
-                    }
-                  />
-                  <div className="pl-calc-meta">
-                    <span className={`pl-calc-tier ${TIER_CLS[t.label] || "tier-nodata"}`}>
-                      {t.label} · {fmt(sub)}
-                    </span>
-                    <span className="pl-calc-sens">+10 pts here = +{fmt(sens * 10)} overall</span>
-                  </div>
-                </div>
-              );
-            })}
-            <div className="pl-calc-presets">
-              <span>Set all to:</span>
-              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 45])))}>Fair</button>
-              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 70])))}>Great</button>
-              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 90])))}>Fantastic</button>
-              <button onClick={() => setCalc(Object.fromEntries(METRICS.map((m) => [m.key, 100])))}>Max</button>
-            </div>
-          </div>
-          <div className="pl-calc-out">
-            <div className="pl-wi-outlab">Modeled Overall</div>
-            <div className="pl-wi-outnum">{calcModel.gatedOverall === null ? "—" : fmt(calcModel.gatedOverall)}</div>
-            <div className={`pl-wi-outtier ${TIER_CLS[calcTier.label] || "tier-nodata"}`}>
-              {calcTier.label || "—"}
-            </div>
-            {calcModel.safetyGated && (
-              <div className="pl-calc-gate">⚠ Safety ceiling is capping this Overall.</div>
-            )}
-            <div className="pl-calc-out-note">
-              Ungated average: {fmt(calcModel.overall)}. The Overall is the safety-gated figure.
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* STEP 1 — upload / enter */}
@@ -486,7 +430,13 @@ export default function PlannerApp() {
               {METRICS.map((m) => {
                 const raw = values[m.key];
                 const sub = rawToSubScore(m.key, raw);
-                const t = subScoreTier(sub);
+                // Prefer the tier Amazon printed for this exact value; the
+                // modeled tier is only a fallback (thresholds are estimates).
+                const printed =
+                  parseInfo?.tiers?.[m.key] && parseInfo.values?.[m.key] === raw
+                    ? parseInfo.tiers[m.key]
+                    : null;
+                const t = printed ? { label: printed } : subScoreTier(sub);
                 const contrib =
                   sub !== null && model.weightCovered
                     ? (sub * m.weight) / model.weightCovered
@@ -532,9 +482,9 @@ export default function PlannerApp() {
           <div className="pl-leverhead">
             If each metric were lifted to a sub-score of
             <select value={target} onChange={(e) => setTarget(Number(e.target.value))}>
-              <option value={70}>70 (Great)</option>
-              <option value={90}>90 (Fantastic)</option>
-              <option value={100}>100 (max)</option>
+              <option value={ANCHOR.great}>{ANCHOR.great} (Great)</option>
+              <option value={ANCHOR.fantastic}>{ANCHOR.fantastic} (Fantastic)</option>
+              <option value={100}>100 (perfect)</option>
             </select>
             , here&apos;s how many Overall points each move is worth — highest first.
           </div>
@@ -558,60 +508,81 @@ export default function PlannerApp() {
         </section>
       )}
 
-      {/* STEP 4 — what-if */}
-      {hasData && (
-        <section className="pl-card">
-          <div className="pl-step">4 · What-if planner</div>
-          <div className="pl-whatif">
-            <div className="pl-wi-controls">
-              {METRICS.filter((m) => values[m.key] !== undefined).map((m) => {
-                const cur = whatIf[m.key] ?? values[m.key];
-                const dir = THRESHOLDS[m.key]?.dir;
+      {/* STEP 4 — what-if, in raw scorecard units */}
+      <section className="pl-card">
+        <div className="pl-step">4 · What-if planner</div>
+        <div className="pl-calc-intro">
+          {hasData
+            ? "Sliders start on your real scorecard numbers. Drag any metric to see what the Overall would have been."
+            : "Load a scorecard above and these sliders start on your real numbers. Until then they start on a perfect week."}
+        </div>
+        <div className="pl-calc">
+          <div className="pl-calc-controls">
+            {weightsByWeight
+              .filter((m) => simBase[m.key] !== undefined)
+              .map((m) => {
+                const actual = simBase[m.key];
+                const cur = simRaw[m.key];
                 const th = THRESHOLDS[m.key];
-                // slider range: from a strong value to a weak one
-                const lo = dir === "up" ? (th.fair - (th.great - th.fair)) : 0;
-                const hi = dir === "up" ? 100 : th.fair + (th.fair - th.great) * 2;
+                const rng = rawRange(m.key, actual);
+                const printed =
+                  parseInfo?.tiers?.[m.key] && parseInfo.values?.[m.key] === cur
+                    ? parseInfo.tiers[m.key]
+                    : null;
+                const t = printed ? { label: printed } : subScoreTier(rawToSubScore(m.key, cur));
+                const moved = whatIf[m.key] !== undefined && whatIf[m.key] !== actual;
                 return (
-                  <div className="pl-wi-row" key={m.key}>
-                    <div className="pl-wi-lab">
-                      {m.label}
-                      <span className="pl-wi-cur">{fmt(cur)} {m.unit}</span>
+                  <div className="pl-calc-row" key={m.key}>
+                    <div className="pl-calc-lab">
+                      <span className="pl-calc-name">{m.label}</span>
+                      <span className="pl-calc-wt">{fmt(m.weight)}% weight</span>
                     </div>
                     <input
                       type="range"
-                      min={Math.min(lo, hi)}
-                      max={Math.max(lo, hi)}
-                      step={(Math.max(lo, hi) - Math.min(lo, hi)) / 100 || 1}
+                      min={rng.min}
+                      max={rng.max}
+                      step={rng.step}
                       value={cur}
                       onChange={(e) =>
                         setWhatIf((w) => ({ ...w, [m.key]: Number(e.target.value) }))
                       }
                     />
+                    <div className="pl-calc-meta">
+                      <span className={`pl-calc-tier ${TIER_CLS[t.label] || "tier-nodata"}`}>
+                        {fmt(cur, 2)} {m.unit} · {t.label || "—"}
+                        {moved && <span className="pl-calc-sens"> (actual {fmt(actual, 2)})</span>}
+                      </span>
+                      <span className="pl-calc-sens">
+                        Fantastic {th.dir === "up" ? "≥" : "≤"} {fmt(th.fantastic, 2)} (est.)
+                      </span>
+                    </div>
                   </div>
                 );
               })}
-              {Object.keys(whatIf).length > 0 && (
-                <button className="pl-reset" onClick={() => setWhatIf({})}>Reset to actual</button>
-              )}
-            </div>
-            <div className="pl-wi-out">
-              <div className="pl-wi-outlab">Projected Overall</div>
-              <div className="pl-wi-outnum">
-                {whatIfResult.calibrated === null ? "—" : fmt(whatIfResult.calibrated)}
-              </div>
-              <div className={`pl-wi-outtier ${TIER_CLS[overallTier(whatIfResult.calibrated).label] || "tier-nodata"}`}>
-                {overallTier(whatIfResult.calibrated).label || "—"}
-              </div>
-              {baselineDisplay !== null && whatIfResult.calibrated !== null && (
-                <div className="pl-wi-delta">
-                  {whatIfResult.calibrated - baselineDisplay >= 0 ? "▲ +" : "▼ "}
-                  {fmt(whatIfResult.calibrated - baselineDisplay)} vs current
-                </div>
-              )}
+            <div className="pl-calc-presets">
+              <span>Set all to:</span>
+              <button onClick={() => setWhatIf({})}>{hasData ? "My scorecard" : "Reset"}</button>
+              <button onClick={() => setAll(PERFECT_RAW)}>Perfect</button>
             </div>
           </div>
-        </section>
-      )}
+          <div className="pl-calc-out">
+            <div className="pl-wi-outlab">{hasData ? "Projected Overall" : "Modeled Overall"}</div>
+            <div className="pl-wi-outnum">{simProj === null ? "—" : fmt(simProj)}</div>
+            <div className={`pl-wi-outtier ${TIER_CLS[simTier.label] || "tier-nodata"}`}>
+              {simTier.label || "—"}
+            </div>
+            {simNow !== null && simProj !== null && (
+              <div className="pl-wi-delta">
+                {simProj - simNow >= 0 ? "▲ +" : "▼ "}
+                {fmt(simProj - simNow)} vs {hasData ? "your scorecard" : "start"}
+              </div>
+            )}
+            {simGated && (
+              <div className="pl-calc-gate">⚠ Safety ceiling is capping this Overall.</div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* STEP 5 — supplemental */}
       <section className="pl-card">

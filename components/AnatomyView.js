@@ -34,7 +34,7 @@ function fmt(n, d = 1) {
 export default function AnatomyView() {
   const [vals, setVals] = useState(W35);
   const model = useMemo(() => computeOverall(vals), [vals]);
-  const levers = useMemo(() => rankLevers(vals, 90), [vals]);
+  const levers = useMemo(() => rankLevers(vals, 100), [vals]);
   const t = overallTier(model.gatedOverall);
 
   return (
